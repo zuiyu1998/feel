@@ -4,6 +4,7 @@
 - 网络
  */
 
+import 'package:feel/src/store/index.dart';
 import 'package:flutter/material.dart';
 
 class SplashPage extends StatefulWidget {
@@ -19,6 +20,8 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> bootstrap() async {
     ///全局实例注入
     ///从文件系统读取持久化数据
+    await initStore();
+
     ///从网络同步数据
   }
 

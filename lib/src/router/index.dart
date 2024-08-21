@@ -5,7 +5,10 @@ class RouterBuilder {
   static const initial = Routes.splash;
 
   static final routes = [
-    GetPage(name: Routes.splash, page: () => const SplashPage())
+    GetPage(
+      name: Routes.splash,
+      page: () => const SplashPage(),
+    )
   ];
 }
 
