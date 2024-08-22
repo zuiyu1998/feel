@@ -6,7 +6,7 @@ class UserStore extends Store {
 
   //用户信息
 
-  isAuth() {
+  bool isAuth() {
     if (token != null) {
       return true;
     } else {
@@ -14,7 +14,7 @@ class UserStore extends Store {
     }
   }
 
-  getToken() {
+  String? getToken() {
     return token;
   }
 

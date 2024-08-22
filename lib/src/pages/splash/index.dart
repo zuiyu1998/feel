@@ -4,8 +4,12 @@
 - 网络
  */
 
+import 'package:feel/src/pages/home/index.dart';
+import 'package:feel/src/pages/sys/login/index.dart';
 import 'package:feel/src/store/index.dart';
+import 'package:feel/src/store/modules/user.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({
@@ -23,6 +27,20 @@ class _SplashPageState extends State<SplashPage> {
     await initStore();
 
     ///从网络同步数据
+
+    ///更新路由
+    ///
+    await jumpToHomeOrLogin();
+  }
+
+  Future<void> jumpToHomeOrLogin() async {
+    var userStore = Get.find<UserStore>();
+
+    if (userStore.isAuth()) {
+      await Get.off(const HomePage());
+    } else {
+      await Get.off(const LoginPage());
+    }
   }
 
   @override
