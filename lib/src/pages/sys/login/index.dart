@@ -1,3 +1,4 @@
+import 'package:feel/src/apis/user/index.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -11,6 +12,12 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+
+  Future<void> submmit() async {
+    var res = await login();
+
+    debugPrint(res);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,8 +68,7 @@ class _LoginPageState extends State<LoginPage> {
                             onPressed: () {
                               if ((_formKey.currentState as FormState)
                                   .validate()) {
-                                //验证通过提交数据
-                                debugPrint("test");
+                                submmit();
                               }
                             },
                           ),
