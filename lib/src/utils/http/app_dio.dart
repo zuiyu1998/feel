@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:feel/src/store/modules/user.dart';
+import 'package:get/get.dart' show Get, Inst;
 
 abstract class AppTransformer {
   Map<String, dynamic> onResponse(Response res);
@@ -24,6 +26,21 @@ class AppTransformerInterceptor extends Interceptor {
   AppTransformerInterceptor(
     this.transformer,
   );
+
+  @override
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) {
+    var userStore = Get.find<UserStore>();
+    var token = userStore.getToken();
+
+    if (token != null) {
+      options.headers["Authorization"] = "Beare $token";
+    }
+
+    handler.next(options);
+  }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
