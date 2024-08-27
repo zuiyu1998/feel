@@ -1,5 +1,8 @@
 import 'package:feel/src/apis/user/index.dart';
+import 'package:feel/src/router/index.dart';
+import 'package:feel/src/store/modules/user.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({
@@ -12,11 +15,11 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
+  var userStore = Get.find<UserStore>();
 
   Future<void> submmit() async {
-    var res = await login();
-
-    debugPrint(res);
+    var token = await login();
+    userStore.setToken(token);
   }
 
   @override
