@@ -8,7 +8,11 @@ void startMockDio(Dio dio) {
     "/api/vi/user/login",
     (server) => server.reply(
       200,
-      {'message': 'success', "code": 200, "result": "success"},
+      {
+        'message': 'success',
+        "code": 200,
+        "result": {"token": "1111"}
+      },
       delay: const Duration(seconds: 1),
     ),
   );
@@ -25,8 +29,8 @@ void startMockDio(Dio dio) {
           "nikename": "test",
           "avatar": "11111",
           "uid": "123456",
-          "create_at": "",
-          "update_at": ""
+          "create_at": "2019-01-25T02:00:00.000Z",
+          "update_at": "2019-01-25T02:00:00.000Z"
         }
       },
       delay: const Duration(seconds: 1),

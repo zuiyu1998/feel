@@ -51,7 +51,7 @@ class UserStore extends Store {
   }
 
   ///登录
-  void login() async {
+  Future<void> login() async {
     var token = await UserApi.userLogin();
     setToken(token);
 

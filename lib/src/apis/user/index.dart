@@ -5,7 +5,7 @@ class UserApi {
   static Future<String> userLogin() async {
     var res = await defineDio.get("/api/vi/user/login");
 
-    return res;
+    return res["token"];
   }
 
   static Future<UserBaseModel> getBaseUserInfo() async {
