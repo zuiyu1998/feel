@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:feel/src/apis/user/index.dart';
+import 'package:feel/src/helpers/shared_preferences_helper.dart';
+import 'package:feel/src/store/consts.dart';
 import 'package:feel/src/store/store.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -46,8 +50,9 @@ class UserStore extends Store {
     return token;
   }
 
-  void setToken(String? token) {
+  Future<void> setToken(String? token) async {
     this.token = token;
+    await save();
   }
 
   ///登录
@@ -62,10 +67,22 @@ class UserStore extends Store {
   Future<void> getBaseUserInfo() async {
     var user = await UserApi.getBaseUserInfo();
     this.user = user;
+    await save();
   }
 
   @override
-  Future<void> ensureInitialized() async {}
+  Future<void> save() async {
+    await SharedPreferencesHelper.setString(userKey, json.encode(toJson()));
+  }
+
+  @override
+  Future<void> ensureInitialized() async {
+    var user = await SharedPreferencesHelper.getString(userKey);
+    if (user != null) {
+      var userJson = json.decode(user);
+      UserStore.fromJson(userJson);
+    }
+  }
 
   factory UserStore.fromJson(Map<String, dynamic> json) =>
       _$UserStoreFromJson(json);

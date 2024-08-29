@@ -4,6 +4,7 @@
 - 网络
  */
 
+import 'package:feel/src/helpers/index.dart';
 import 'package:feel/src/pages/home/index.dart';
 import 'package:feel/src/pages/sys/login/index.dart';
 import 'package:feel/src/store/index.dart';
@@ -23,6 +24,8 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   Future<void> bootstrap() async {
     ///全局实例注入
+    await initHelpers();
+
     ///从文件系统读取持久化数据
     await initStore();
 

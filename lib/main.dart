@@ -13,6 +13,8 @@ void main() async {
     startMockDio(defineDio.dio);
   }
 
+  WidgetsFlutterBinding.ensureInitialized();
+
   await bootstrap();
 
   runApp(const MyApp());

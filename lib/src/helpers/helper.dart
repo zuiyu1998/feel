@@ -1,3 +1,7 @@
+import 'package:get_it/get_it.dart';
+
+final getIt = GetIt.instance;
+
 abstract class Helper {
-  Future<void> ensureInitialized() async {}
+  static Future<void> ensureInitialized() async {}
 }
