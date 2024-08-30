@@ -5,7 +5,34 @@ void startMockDio(Dio dio) {
   final dioAdapter = DioAdapter(dio: dio);
 
   dioAdapter.onGet(
-    "/api/vi/user/login",
+    "/api/v1/feed/get_feed_page_list",
+    (server) => server.reply(
+      200,
+      {
+        'message': 'success',
+        "code": 200,
+        "result": {
+          "has_next": false,
+          "page": 1,
+          "page_size": 50,
+          "data": [
+            {
+              "id": 1,
+              "source": {
+                "id": 1,
+                "kind": "post",
+              },
+              "summary": {}
+            }
+          ]
+        }
+      },
+      delay: const Duration(seconds: 1),
+    ),
+  );
+
+  dioAdapter.onGet(
+    "/api/v1/user/login",
     (server) => server.reply(
       200,
       {
@@ -18,7 +45,7 @@ void startMockDio(Dio dio) {
   );
 
   dioAdapter.onGet(
-    "/api/vi/user/get_base_user_info",
+    "/api/v1/user/get_base_user_info",
     (server) => server.reply(
       200,
       {
