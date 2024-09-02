@@ -21,6 +21,14 @@ void startMockDio(Dio dio) {
               "source": {
                 "id": 1,
                 "kind": "post",
+                "user": {
+                  "id": 1,
+                  "nikename": "test",
+                  "avatar": "11111",
+                  "uid": "123456",
+                  "create_at": "2019-01-25T02:00:00.000Z",
+                  "update_at": "2019-01-25T02:00:00.000Z"
+                }
               },
               "summary": {}
             }

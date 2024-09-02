@@ -9,12 +9,14 @@ part of 'model.dart';
 FeedSource _$FeedSourceFromJson(Map<String, dynamic> json) => FeedSource(
       (json['id'] as num).toInt(),
       $enumDecode(_$FeedKindEnumMap, json['kind']),
+      UserBaseModel.fromJson(json['user'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$FeedSourceToJson(FeedSource instance) =>
     <String, dynamic>{
       'id': instance.id,
       'kind': _$FeedKindEnumMap[instance.kind]!,
+      'user': instance.user,
     };
 
 const _$FeedKindEnumMap = {

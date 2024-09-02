@@ -16,9 +16,9 @@ class RouterBuilder {
 
   static final routes = [
     GetPage(
-        name: Routes.splash,
-        page: () => const SplashPage(),
-        binding: GlobalBindings()),
+      name: Routes.splash,
+      page: () => const SplashPage(),
+    ),
     GetPage(
       name: Routes.home,
       page: () => const HomePage(),

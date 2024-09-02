@@ -5,6 +5,7 @@ import 'package:feel/src/apis/user/model.dart';
 import 'package:feel/src/helpers/shared_preferences_helper.dart';
 import 'package:feel/src/store/consts.dart';
 import 'package:feel/src/store/store.dart';
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'user.g.dart';
@@ -58,10 +59,13 @@ class UserStore extends Store {
 
   @override
   Future<void> ensureInitialized() async {
-    var user = await SharedPreferencesHelper.getString(userKey);
-    if (user != null) {
-      var userJson = json.decode(user);
-      UserStore.fromJson(userJson);
+    var userStr = await SharedPreferencesHelper.getString(userKey);
+    if (userStr != null) {
+      var userJson = json.decode(userStr);
+      var useStore = UserStore.fromJson(userJson);
+
+      token = useStore.token;
+      user = useStore.user;
     }
   }
 

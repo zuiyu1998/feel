@@ -1,3 +1,4 @@
+import 'package:feel/src/apis/user/model.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'model.g.dart';
@@ -8,8 +9,9 @@ enum FeedKind { post }
 class FeedSource {
   int id;
   FeedKind kind;
+  UserBaseModel user;
 
-  FeedSource(this.id, this.kind);
+  FeedSource(this.id, this.kind, this.user);
 
   factory FeedSource.fromJson(Map<String, dynamic> json) =>
       _$FeedSourceFromJson(json);

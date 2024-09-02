@@ -4,7 +4,10 @@ import 'package:get/get.dart';
 
 Future<void> initialized<T extends Store>(T store) async {
   await store.ensureInitialized();
-  Get.put<T>(store);
+
+  Get.replace<T>(
+    store,
+  );
 }
 
 Future<void> initStore() async {
