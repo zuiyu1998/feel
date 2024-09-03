@@ -24,8 +24,12 @@ class Feed {
   int id;
   FeedSource source;
   Map<String, dynamic> summary;
+  @JsonKey(name: "create_at")
+  DateTime createAt;
+  @JsonKey(name: "update_at")
+  DateTime updateAt;
 
-  Feed(this.id, this.source, this.summary);
+  Feed(this.id, this.source, this.summary, this.createAt, this.updateAt);
 
   factory Feed.fromJson(Map<String, dynamic> json) => _$FeedFromJson(json);
 

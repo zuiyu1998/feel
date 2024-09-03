@@ -24,13 +24,21 @@ void startMockDio(Dio dio) {
                 "user": {
                   "id": 1,
                   "nikename": "test",
-                  "avatar": "11111",
+                  "avatar":
+                      "https://i1.hdslb.com/bfs/face/14686527d8d715e986ddd29a208775a29a0030c8.jpg",
                   "uid": "123456",
                   "create_at": "2019-01-25T02:00:00.000Z",
                   "update_at": "2019-01-25T02:00:00.000Z"
                 }
               },
-              "summary": {}
+              "summary": {
+                "content": "这是测试",
+                "create_at": "2019-01-25T02:00:00.000Z",
+                "update_at": "2019-01-25T02:00:00.000Z",
+                "imags": []
+              },
+              "create_at": "2019-01-25T02:00:00.000Z",
+              "update_at": "2019-01-25T02:00:00.000Z"
             }
           ]
         }
@@ -62,7 +70,8 @@ void startMockDio(Dio dio) {
         "result": {
           "id": 1,
           "nikename": "test",
-          "avatar": "11111",
+          "avatar":
+              "https://i1.hdslb.com/bfs/face/14686527d8d715e986ddd29a208775a29a0030c8.jpg",
           "uid": "123456",
           "create_at": "2019-01-25T02:00:00.000Z",
           "update_at": "2019-01-25T02:00:00.000Z"

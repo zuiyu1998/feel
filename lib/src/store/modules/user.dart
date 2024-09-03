@@ -5,7 +5,6 @@ import 'package:feel/src/apis/user/model.dart';
 import 'package:feel/src/helpers/shared_preferences_helper.dart';
 import 'package:feel/src/store/consts.dart';
 import 'package:feel/src/store/store.dart';
-import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'user.g.dart';
