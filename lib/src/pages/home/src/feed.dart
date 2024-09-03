@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:feel/src/apis/feed/index.dart';
 import 'package:feel/src/apis/feed/model.dart';
 import 'package:feel/src/apis/post/model.dart';
+import 'package:feel/src/utils/date_time.dart';
 import 'package:flutter/material.dart';
 
 class FeedPage extends StatefulWidget {
@@ -32,7 +33,7 @@ class PostSummaryItem extends StatelessWidget {
     if (item.images != null) {}
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
+      padding: const EdgeInsets.fromLTRB(8, 12, 0, 0),
       child: Row(
         children: [
           Column(
@@ -66,7 +67,7 @@ class FeedItem extends StatelessWidget {
                 children: [Text(item.source.user.nikename)],
               ),
               Row(
-                children: [Text(item.source.user.nikename)],
+                children: [Text(fromNow(item.createAt))],
               )
             ],
           ),

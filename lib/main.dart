@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:moment_dart/moment_dart.dart';
 
 void main() async {
   if (kDebugMode) {
@@ -23,6 +24,8 @@ void main() async {
 Future<void> bootstrap() async {
   //状态栏透明
   updateStatsBar();
+
+  Moment.setGlobalLocalization(LocalizationZhCn());
 }
 
 void updateStatsBar() {
