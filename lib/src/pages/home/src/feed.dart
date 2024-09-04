@@ -113,6 +113,22 @@ class FeedItem extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 20,
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
+                child: Text(
+                  "${item.like}",
+                ),
+              )
+            ],
+          )),
+          Expanded(
+              child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
                 Icons.thumb_up_alt_outlined,
                 size: 20,
               ),
@@ -124,22 +140,6 @@ class FeedItem extends StatelessWidget {
               )
             ],
           )),
-          Expanded(
-              child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 20,
-              ),
-              Container(
-                margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
-                child: Text(
-                  "${item.like}",
-                ),
-              )
-            ],
-          ))
         ],
       ),
     );
@@ -150,6 +150,7 @@ class FeedItem extends StatelessWidget {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 16.0),
       child: Column(
         children: [feedSource(), feedSummary(), feedActions()],
       ),
