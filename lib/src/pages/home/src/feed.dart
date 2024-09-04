@@ -50,7 +50,7 @@ class FeedItem extends StatelessWidget {
 
   const FeedItem({super.key, required this.item});
 
-  Widget userTop() {
+  Widget feedSource() {
     return Row(
       children: [
         Image.network(
@@ -76,7 +76,7 @@ class FeedItem extends StatelessWidget {
     );
   }
 
-  Widget feedKind() {
+  Widget feedSummary() {
     switch (item.source.kind) {
       case FeedKind.post:
         var postItem = PostSummary.fromJson(item.summary);
@@ -87,13 +87,71 @@ class FeedItem extends StatelessWidget {
     }
   }
 
+  Widget feedActions() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0.0, 8, 0.0, 0.0),
+      child: Row(
+        children: [
+          Expanded(
+              child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.share_outlined,
+                size: 20,
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
+                child: Text(
+                  "${item.share}",
+                ),
+              )
+            ],
+          )),
+          Expanded(
+              child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.thumb_up_alt_outlined,
+                size: 20,
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
+                child: Text(
+                  "${item.comment}",
+                ),
+              )
+            ],
+          )),
+          Expanded(
+              child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 20,
+              ),
+              Container(
+                margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
+                child: Text(
+                  "${item.like}",
+                ),
+              )
+            ],
+          ))
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(8),
       child: Column(
-        children: [userTop(), feedKind()],
+        children: [feedSource(), feedSummary(), feedActions()],
       ),
     );
   }

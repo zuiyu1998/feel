@@ -29,6 +29,9 @@ Feed _$FeedFromJson(Map<String, dynamic> json) => Feed(
       json['summary'] as Map<String, dynamic>,
       DateTime.parse(json['create_at'] as String),
       DateTime.parse(json['update_at'] as String),
+      (json['like'] as num).toInt(),
+      (json['comment'] as num).toInt(),
+      (json['share'] as num).toInt(),
     );
 
 Map<String, dynamic> _$FeedToJson(Feed instance) => <String, dynamic>{
@@ -37,4 +40,7 @@ Map<String, dynamic> _$FeedToJson(Feed instance) => <String, dynamic>{
       'summary': instance.summary,
       'create_at': instance.createAt.toIso8601String(),
       'update_at': instance.updateAt.toIso8601String(),
+      'like': instance.like,
+      'share': instance.share,
+      'comment': instance.comment,
     };

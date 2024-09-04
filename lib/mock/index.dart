@@ -38,7 +38,10 @@ void startMockDio(Dio dio) {
                 "imags": []
               },
               "create_at": "2019-01-25T02:00:00.000Z",
-              "update_at": "2019-01-25T02:00:00.000Z"
+              "update_at": "2019-01-25T02:00:00.000Z",
+              "like": 1,
+              "share": 0,
+              "comment": 2
             }
           ]
         }
