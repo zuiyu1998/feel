@@ -21,8 +21,8 @@ class _HomePageState extends State<HomePage> {
 
   static const List<Widget> _pages = <Widget>[
     PushPage(),
-    PushPage(),
     FeedPage(),
+    PushPage(),
     PushPage(),
   ];
 
@@ -36,7 +36,7 @@ class _HomePageState extends State<HomePage> {
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "首页"),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "动态"),
+          BottomNavigationBarItem(icon: Icon(Icons.feed), label: "动态"),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "聊天"),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "我的"),
         ],

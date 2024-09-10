@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:feel/src/apis/feed/index.dart';
 import 'package:feel/src/apis/feed/model.dart';
 import 'package:feel/src/apis/post/model.dart';
+import 'package:feel/src/router/index.dart';
 import 'package:feel/src/utils/date_time.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class FeedPage extends StatefulWidget {
   const FeedPage({
@@ -49,6 +51,15 @@ class FeedItem extends StatelessWidget {
   final Feed item;
 
   const FeedItem({super.key, required this.item});
+
+  void goToDetail() {
+    switch (item.source.kind) {
+      case FeedKind.post:
+        Get.toNamed(Routes.post, arguments: {"id": item.source.id});
+        break;
+      default:
+    }
+  }
 
   Widget feedSource() {
     return Row(
@@ -109,20 +120,25 @@ class FeedItem extends StatelessWidget {
             ],
           )),
           Expanded(
-              child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 20,
-              ),
-              Container(
-                margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
-                child: Text(
-                  "${item.like}",
+              child: InkWell(
+            onTap: () {
+              goToDetail();
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 20,
                 ),
-              )
-            ],
+                Container(
+                  margin: const EdgeInsets.fromLTRB(6.0, 0.0, 0.0, 0.0),
+                  child: Text(
+                    "${item.like}",
+                  ),
+                )
+              ],
+            ),
           )),
           Expanded(
               child: Row(

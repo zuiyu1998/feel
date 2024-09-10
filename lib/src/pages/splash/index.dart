@@ -7,6 +7,7 @@
 import 'package:feel/src/helpers/index.dart';
 import 'package:feel/src/pages/home/index.dart';
 import 'package:feel/src/pages/sys/login/index.dart';
+import 'package:feel/src/router/index.dart';
 import 'package:feel/src/store/index.dart';
 import 'package:feel/src/store/modules/user.dart';
 import 'package:flutter/material.dart';
@@ -40,9 +41,9 @@ class _SplashPageState extends State<SplashPage> {
     var userStore = Get.find<UserStore>();
 
     if (userStore.isAuth()) {
-      await Get.off(const HomePage());
+      await Get.offNamed(Routes.home);
     } else {
-      await Get.off(const LoginPage());
+      await Get.offNamed(Routes.login);
     }
   }
 

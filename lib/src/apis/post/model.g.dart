@@ -12,7 +12,7 @@ Post _$PostFromJson(Map<String, dynamic> json) => Post(
       (json['images'] as List<dynamic>).map((e) => e as String).toList(),
       DateTime.parse(json['create_at'] as String),
       DateTime.parse(json['update_at'] as String),
-      (json['useId'] as num).toInt(),
+      UserBaseModel.fromJson(json['user'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$PostToJson(Post instance) => <String, dynamic>{
@@ -21,7 +21,7 @@ Map<String, dynamic> _$PostToJson(Post instance) => <String, dynamic>{
       'images': instance.images,
       'create_at': instance.createAt.toIso8601String(),
       'update_at': instance.updateAt.toIso8601String(),
-      'useId': instance.useId,
+      'user': instance.user,
     };
 
 PostSummary _$PostSummaryFromJson(Map<String, dynamic> json) => PostSummary(

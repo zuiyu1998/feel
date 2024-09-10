@@ -1,3 +1,4 @@
+import 'package:feel/src/apis/user/model.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'model.g.dart';
@@ -11,10 +12,11 @@ class Post {
   DateTime createAt;
   @JsonKey(name: "update_at")
   DateTime updateAt;
-  int useId;
+
+  UserBaseModel user;
 
   Post(this.id, this.content, this.images, this.createAt, this.updateAt,
-      this.useId);
+      this.user);
 
   factory Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
 

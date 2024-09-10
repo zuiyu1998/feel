@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 
 Future<void> initialized<T extends Store>(T store) async {
   await store.ensureInitialized();
-  Get.put(store);
+  Get.put(store, permanent: true);
 }
 
 Future<void> initStore() async {
