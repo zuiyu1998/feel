@@ -2,15 +2,7 @@ import 'package:feel/src/pages/home/index.dart';
 import 'package:feel/src/pages/post/index.dart';
 import 'package:feel/src/pages/splash/index.dart';
 import 'package:feel/src/pages/sys/login/index.dart';
-import 'package:feel/src/store/modules/user.dart';
 import 'package:get/get.dart';
-
-class GlobalBindings extends Bindings {
-  @override
-  void dependencies() {
-    Get.lazyPut(fenix: true, () => UserStore());
-  }
-}
 
 class RouterBuilder {
   static const initial = Routes.splash;

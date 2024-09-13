@@ -1,9 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:feel/src/apis/post/index.dart';
 import 'package:feel/src/apis/post/model.dart';
 import 'package:feel/src/components/loading/page_loading.dart';
-import 'package:feel/src/components/user_nav.dart';
+import 'package:feel/src/pages/post/post_content.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 class PostPage extends StatefulWidget {
   const PostPage({
@@ -19,12 +19,14 @@ class _PostPageState extends State<PostPage> {
   bool isInit = false;
 
   Future<void> init() async {
-    var res = await PostApi.getPost(0);
+    try {
+      var res = await PostApi.getPost(0);
 
-    setState(() {
-      post = res;
-      isInit = true;
-    });
+      setState(() {
+        post = res;
+        isInit = true;
+      });
+    } on DioException catch (_) {}
   }
 
   @override
@@ -37,33 +39,13 @@ class _PostPageState extends State<PostPage> {
   }
 
   Widget load() {
-    return Column(
-      children: [
-        UserNav(
-          user: post?.user,
-          goTo: goBack,
-        ),
-        const Expanded(
-          child: PageLoading(),
-        ),
-      ],
-    );
+    return const PageLoading();
   }
 
   Widget content() {
     return Column(
-      children: [
-        UserNav(
-          user: post?.user,
-          goTo: goBack,
-        ),
-        Expanded(child: Container()),
-      ],
+      children: [Expanded(child: PostContent(post: post!))],
     );
-  }
-
-  void goBack() {
-    Get.back();
   }
 
   @override

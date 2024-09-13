@@ -1,19 +1,46 @@
-import 'package:feel/src/apis/post/model.dart';
 import 'package:feel/src/apis/user/model.dart';
 import 'package:flutter/material.dart';
 
 class UserNav extends StatefulWidget {
-  final UserBaseModel? user;
+  final UserBaseModel user;
   final void Function()? goTo;
+  final double opacity;
 
-  const UserNav({super.key, this.user, this.goTo});
+  const UserNav(
+      {super.key, required this.user, required this.opacity, this.goTo});
 
   @override
   State<UserNav> createState() => _UserNavState();
 }
 
 class _UserNavState extends State<UserNav> {
-  late Post post;
+  Widget user() {
+    return Expanded(
+      child: Opacity(
+        opacity: widget.opacity,
+        child: Row(
+          children: [
+            Image.network(
+              widget.user.avatar,
+              width: 32,
+              height: 32,
+            ),
+            Expanded(
+                child: Container(
+              padding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+              child: Column(
+                children: [
+                  Row(
+                    children: [Text(widget.user.nikename)],
+                  ),
+                ],
+              ),
+            ))
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +58,8 @@ class _UserNavState extends State<UserNav> {
               Icons.navigate_before,
               size: 36,
             ),
-          )
+          ),
+          user()
         ],
       ),
     );
