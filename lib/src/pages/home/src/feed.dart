@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:feel/src/apis/feed/index.dart';
 import 'package:feel/src/apis/feed/model.dart';
 import 'package:feel/src/apis/post/model.dart';
+import 'package:feel/src/components/images.dart';
 import 'package:feel/src/router/index.dart';
 import 'package:feel/src/utils/date_time.dart';
 import 'package:flutter/material.dart';
@@ -27,23 +28,25 @@ class PostSummaryItem extends StatelessWidget {
     List<Widget> list = [];
 
     if (item.content != null) {
-      list.add(Text(
-        item.content as String,
+      list.add(Container(
+        width: double.infinity,
+        child: Text(
+          item.content as String,
+          textAlign: TextAlign.start,
+        ),
       ));
     }
 
-    if (item.images != null) {}
+    if (item.images != null && item.images!.isNotEmpty) {
+      list.add(ImagesView(images: item.images as List<String>));
+    }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 12, 0, 0),
-      child: Row(
-        children: [
-          Column(
-            children: list,
-          )
-        ],
-      ),
-    );
+        padding: const EdgeInsets.fromLTRB(8, 12, 0, 0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: list,
+        ));
   }
 }
 
