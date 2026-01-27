@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = [".", "./crates/feel_entity", "crates/feel_core"]
+members = [".", "./crates/feel_entity", "cmd/feel_api", "crates/feel_core"]
 
 [dependencies]

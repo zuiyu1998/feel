@@ -15,3 +15,5 @@ pub trait UserRepo: 'static + Send + Sync {
     ///用户系统更改个人信息
     fn update(&self, update: &UserUpdate) -> Result<User>;
 }
+
+pub trait UserDataBase: 'static + Send + Sync {}
