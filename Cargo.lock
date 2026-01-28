@@ -96,6 +96,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -154,6 +155,10 @@ dependencies = [
 [[package]]
 name = "feel"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+]
 
 [[package]]
 name = "feel_api"
@@ -177,6 +182,7 @@ name = "feel_entity"
 version = "0.1.0"
 dependencies = [
  "feel_core",
+ "serde",
 ]
 
 [[package]]

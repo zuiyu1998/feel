@@ -7,3 +7,5 @@ edition = "2024"
 members = [".", "./crates/feel_entity", "cmd/feel_api", "crates/feel_core", "crates/feel_storage"]
 
 [dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
