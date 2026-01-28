@@ -1,14 +1,10 @@
+use feel_api::app_route;
 use feel_core::tokio;
-use poem::{Route, Server, get, handler, listener::TcpListener, web::Path};
-
-#[handler]
-fn hello(Path(name): Path<String>) -> String {
-    format!("hello: {}", name)
-}
+use poem::{Route, Server, listener::TcpListener};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    let app = Route::new().at("/hello/:name", get(hello));
+    let app = Route::new().nest("/api/v1", app_route());
     Server::new(TcpListener::bind("0.0.0.0:3000"))
         .run(app)
         .await

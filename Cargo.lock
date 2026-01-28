@@ -160,7 +160,7 @@ name = "feel_api"
 version = "0.1.0"
 dependencies = [
  "feel_core",
- "feel_entity",
+ "feel_storage",
  "poem",
 ]
 
@@ -177,6 +177,13 @@ name = "feel_entity"
 version = "0.1.0"
 dependencies = [
  "feel_core",
+]
+
+[[package]]
+name = "feel_storage"
+version = "0.1.0"
+dependencies = [
+ "feel_entity",
 ]
 
 [[package]]

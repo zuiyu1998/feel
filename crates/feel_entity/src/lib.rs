@@ -1,6 +1,5 @@
-mod user;
+pub mod user;
 
-pub mod error;
-
-pub use error::Result;
-pub use user::*;
+pub mod prelude {
+    pub use crate::user::*;
+}
