@@ -26,3 +26,26 @@ pub struct UserRegister {}
 pub struct UserLogin {}
 
 pub struct UserUpdate {}
+
+/// User credential entity for authentication
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserCredential {
+    /// Database primary key
+    pub id: i64,
+    /// User unique identifier
+    pub user_uid: String,
+    /// Credential type (e.g., password, email, phone)
+    pub credential_type: String,
+    /// Credential name/identifier
+    pub credential_name: String,
+    /// Encrypted credential data
+    pub encrypted_data: String,
+    /// Encryption key identifier
+    pub encryption_key: String,
+    /// Whether the credential is enabled
+    pub enabled: bool,
+    /// Record creation time
+    pub created_at: DateTime<Utc>,
+    /// Last update time
+    pub updated_at: DateTime<Utc>,
+}
