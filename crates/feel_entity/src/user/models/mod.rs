@@ -21,7 +21,20 @@ pub struct UserBase {
     pub updated_at: DateTime<Utc>,
 }
 
-pub struct UserRegister {}
+/// User registration entity (combines UserBase and UserCredential)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserRegister {
+    /// User display name (required)
+    pub name: String,
+    /// User avatar URL (required)
+    pub avatar: String,
+    /// Credential type (required, e.g., "password", "email", "phone")
+    pub credential_type: String,
+    /// Credential name/identifier (required, e.g., email address or phone number)
+    pub credential_name: String,
+    /// Credential data (required, will be encrypted)
+    pub data: String,
+}
 
 pub struct UserLogin {}
 
