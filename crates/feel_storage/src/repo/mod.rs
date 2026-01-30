@@ -1,3 +1,7 @@
+mod user;
+
+pub use user::*;
+
 use crate::Result;
 use feel_entity::prelude::*;
 

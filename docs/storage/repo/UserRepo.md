@@ -1,4 +1,4 @@
-# 用户仓库(UserRepo)
+# UserRepo
 
 用户仓库使用数据库存储用户相关的数据。它是一个trait。
 
