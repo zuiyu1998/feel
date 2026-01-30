@@ -1,6 +1,6 @@
 pub mod user;
 
-use feel_storage::{UserDataBase, common::CommonUserDataBase};
+use feel_storage::database::{CommonUserDataBase, UserDataBase};
 use poem::Route;
 use std::sync::Arc;
 
