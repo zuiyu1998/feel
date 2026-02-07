@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sea-orm-cli migrate generate:*)"
+    ]
+  }
+}

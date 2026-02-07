@@ -4,8 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = [".", "./crates/feel_entity", "cmd/feel_api", "crates/feel_core", "crates/feel_storage"]
+members = [
+    ".",
+    "./crates/feel_entity",
+    "cmd/feel_api",
+    "crates/feel_core",
+    "crates/feel_sea_orm",
+    "crates/feel_storage",
+    "crates/migration",
+]
 
-[dependencies]
-chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
+[workspace.dependencies]
+sea-orm = { version = "1.0", features = ["runtime-tokio-native-tls", "chrono"] }
