@@ -5,3 +5,7 @@ SeaOrmUserRepo是一个实现了UserRepo的trait。
 
 - conn
   conn是sea_orm中connection的对象
+
+# 创建用户
+
+SeaOrmUserRepo使用UserRegister创建UserBase。
