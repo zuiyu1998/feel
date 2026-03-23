@@ -6,6 +6,8 @@ pub enum Error {
     Redis(#[from] redis::RedisError),
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+    #[error("Database error: {0}")]
+    Db(#[from] sea_orm::DbErr),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

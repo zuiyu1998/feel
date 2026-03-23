@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use feel_entity::user::UserBase;
 use sea_orm::entity::prelude::*;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
@@ -27,3 +28,18 @@ pub struct Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl From<Model> for UserBase {
+    fn from(value: Model) -> Self {
+        UserBase {
+            id: value.id,
+            uid: value.uid,
+            name: value.name,
+            avatar: value.avatar,
+            slogan: value.slogan,
+            enabled: value.enabled,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+        }
+    }
+}

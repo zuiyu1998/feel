@@ -16,3 +16,4 @@ members = [
 
 [workspace.dependencies]
 sea-orm = { version = "1.0", features = ["runtime-tokio-native-tls", "chrono"] }
+async-trait = "0.1"
