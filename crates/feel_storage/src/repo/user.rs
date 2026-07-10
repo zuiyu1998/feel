@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use chrono::Local;
 use feel_entity::prelude::*;
 use feel_sea_orm::user::entities::prelude::*;
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, DatabaseConnection, EntityTrait, IntoActiveModel,
+    TransactionTrait,
+};
 
 typedflake::id!(UserId);
 
@@ -49,8 +52,21 @@ impl UserRepo for SeaOrmUserRepo {
         Ok(user.into())
     }
 
-    fn unregister(&self, _user_id: u32) -> Result<UserBase> {
-        todo!()
+    async fn unregister(&self, user_id: i64) -> Result<UserBase> {
+        let now = Local::now();
+
+        let user = UserEntity::find_by_id(user_id)
+            .one(&self.conn)
+            .await?
+            .ok_or_else(|| sea_orm::DbErr::RecordNotFound(format!("User {} not found", user_id)))?;
+
+        let mut user_active = user.into_active_model();
+        user_active.is_delete = Set(true);
+        user_active.updated_at = Set(now.to_utc());
+
+        let updated_user: UserModel = user_active.update(&self.conn).await?;
+
+        Ok(updated_user.into())
     }
 
     fn login(&self, _login: &UserLogin) -> Result<String> {

@@ -25,7 +25,8 @@ impl MigrationTrait for Migration {
             .col(ColumnDef::new(UserColumn::Name).string().not_null())
             .col(ColumnDef::new(UserColumn::Avatar).string().not_null())
             .col(ColumnDef::new(UserColumn::Slogan).string().not_null())
-            .col(ColumnDef::new(UserColumn::Enabled).boolean().not_null())
+            .col(ColumnDef::new(UserColumn::IsEnable).boolean().not_null())
+            .col(ColumnDef::new(UserColumn::IsDelete).boolean().not_null())
             .col(ColumnDef::new(UserColumn::CreatedAt).timestamp().not_null())
             .col(ColumnDef::new(UserColumn::UpdatedAt).timestamp().not_null())
             .to_owned();

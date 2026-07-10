@@ -20,8 +20,8 @@ impl UserDataBase for CommonUserDataBase {
         self.user_repo.register(register).await
     }
 
-    fn unregister(&self, _user_id: u32) -> crate::Result<UserBase> {
-        todo!()
+    async fn unregister(&self, user_id: i64) -> crate::Result<UserBase> {
+        self.user_repo.unregister(user_id).await
     }
 
     fn login(&self, _login: &UserLogin) -> crate::Result<String> {
@@ -42,7 +42,7 @@ pub trait UserDataBase: 'static + Send + Sync {
     ///用户系统注册用户
     async fn register(&self, register: &UserRegister) -> Result<UserBase>;
     ///用户系统注销用户
-    fn unregister(&self, user_id: u32) -> Result<UserBase>;
+    async fn unregister(&self, user_id: i64) -> Result<UserBase>;
     ///用户登录系统
     fn login(&self, login: &UserLogin) -> Result<String>;
     ///用户登出系统
