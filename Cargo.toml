@@ -15,5 +15,9 @@ members = [
 ]
 
 [workspace.dependencies]
-sea-orm = { version = "1.0", features = ["runtime-tokio-native-tls", "chrono"] }
+sea-orm = { version = "1.0", features = [
+    "runtime-tokio-native-tls",
+    "chrono",
+    "sqlx-postgres",
+] }
 async-trait = "0.1"

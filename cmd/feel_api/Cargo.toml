@@ -8,3 +8,6 @@ feel_storage = { path = "../../crates/feel_storage" }
 feel_core = { path = "../../crates/feel_core" }
 
 poem = { version = "3.1" }
+sea-orm.workspace = true
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
