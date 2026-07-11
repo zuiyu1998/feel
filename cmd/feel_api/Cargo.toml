@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+feel_entity = { path = "../../crates/feel_entity" }
 feel_storage = { path = "../../crates/feel_storage" }
 feel_core = { path = "../../crates/feel_core" }
 
 poem = { version = "3.1" }
 sea-orm.workspace = true
+serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

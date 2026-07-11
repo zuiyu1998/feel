@@ -1,3 +1,4 @@
+pub mod model;
 pub mod user;
 
 use feel_storage::{
