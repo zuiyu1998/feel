@@ -1,5 +1,5 @@
 use crate::AppState;
-use crate::model::response::{ApiResponse, ok};
+use crate::model::response::{ApiResponse, from_storage_error, ok};
 use crate::model::user::{RegisterRequest, RegisterResponse};
 use feel_entity::user::UserRegister;
 use poem::web::{Data, Json, Path};
@@ -30,7 +30,10 @@ async fn register(
     };
 
     // 2. 调用领域层
-    let user_base = state.user_database.register(&user_register).await.unwrap();
+    let user_base = match state.user_database.register(&user_register).await {
+        Ok(user) => user,
+        Err(e) => return from_storage_error(e),
+    };
 
     // 3. 领域模型 → DTO 转换 + 统一响应包装
     let response = RegisterResponse {
@@ -55,7 +58,10 @@ async fn unregister(
     Path(user_id): Path<i64>,
 ) -> Json<ApiResponse<RegisterResponse>> {
     // 1. 调用领域层
-    let user_base = state.user_database.unregister(user_id).await.unwrap();
+    let user_base = match state.user_database.unregister(user_id).await {
+        Ok(user) => user,
+        Err(e) => return from_storage_error(e),
+    };
 
     // 2. 领域模型 → DTO 转换 + 统一响应包装
     let response = RegisterResponse {

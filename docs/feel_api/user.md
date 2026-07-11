@@ -77,7 +77,7 @@ pub struct RegisterRequest {
 pub struct ApiResponse<T: Serialize> {
     pub code: i32,
     pub message: String,
-    pub data: T,
+    pub data: Option<T>,
 }
 ```
 
@@ -258,11 +258,10 @@ async fn register(
     };
 
     // 2. 调用领域层
-    let user_base = state
-        .user_database
-        .register(&user_register)
-        .await
-        .unwrap();
+    let user_base = match state.user_database.register(&user_register).await {
+        Ok(user) => user,
+        Err(e) => return from_storage_error(e),
+    };
 
     // 3. 领域模型 → DTO 转换 + 统一响应包装
     let response = RegisterResponse {
@@ -435,7 +434,7 @@ Ok(updated_user.into())
 ### 预期的 Handler 实现（路径参数方案）
 
 ```rust
-use feel_api::model::response::ok;
+use feel_api::model::response::{from_storage_error, ok};
 use feel_api::model::user::RegisterResponse;
 use feel_entity::user::UserBase;
 use poem::web::{Data, Json, Path};
@@ -446,11 +445,10 @@ async fn unregister(
     Path(user_id): Path<i64>,
 ) -> Json<ApiResponse<RegisterResponse>> {
     // 1. 调用领域层
-    let user_base = state
-        .user_database
-        .unregister(user_id)
-        .await
-        .unwrap();
+    let user_base = match state.user_database.unregister(user_id).await {
+        Ok(user) => user,
+        Err(e) => return from_storage_error(e),
+    };
 
     // 2. 领域模型 → DTO 转换 + 统一响应包装
     let response = RegisterResponse {
