@@ -14,13 +14,7 @@
 
 ## 启动步骤
 
-### 1. 运行数据库迁移
-
-```bash
-cargo run -p migration
-```
-
-### 2. 启动 API 服务
+### 1. 启动 API 服务（自动执行迁移）
 
 ```bash
 # 默认配置
@@ -33,7 +27,9 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/feel cargo run -p feel_api
 RUST_LOG=debug cargo run -p feel_api
 ```
 
-### 3. 验证服务
+服务启动时 `init_app_state()` 会自动执行数据库迁移，无需手动运行 `cargo run -p migration`。
+
+### 2. 验证服务
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/user/register
@@ -75,7 +71,10 @@ async fn main() -> Result<(), std::io::Error> {
 graph TD
     feel_api --> feel_storage
     feel_api --> feel_core
+    feel_api --> migration
     feel_storage --> feel_sea_orm
     feel_sea_orm --> sea-orm
+    migration --> sea-orm-migration
+    sea-orm-migration --> sea-orm
     sea_orm --> PostgreSQL
 ```

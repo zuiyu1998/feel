@@ -20,7 +20,7 @@ pub struct Model {
     /// Encryption key identifier
     pub encryption_key: String,
     /// Whether the credential is enabled
-    pub enabled: bool,
+    pub is_enabled: bool,
     /// Record creation time
     pub created_at: DateTime<Utc>,
     /// Last update time

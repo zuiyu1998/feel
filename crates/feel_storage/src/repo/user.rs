@@ -43,6 +43,9 @@ impl UserRepo for SeaOrmUserRepo {
         user_credentials_active_model.encrypted_data = Set(password);
         user_credentials_active_model.credential_type = Set(register.credential_type.to_string());
         user_credentials_active_model.credential_name = Set(register.credential_name.to_string());
+        user_credentials_active_model.user_uid = Set(user.uid.clone());
+        user_credentials_active_model.updated_at = Set(now.to_utc());
+        user_credentials_active_model.created_at = Set(now.to_utc());
 
         let _user_credentials: UserCredentialsModel =
             user_credentials_active_model.insert(&begin).await?;

@@ -64,7 +64,7 @@ pub struct RegisterRequest {
 | `credential_name` | `String` | 凭证名称（如 `"default"`）   |
 | `data`            | `String` | 明文密码                      |
 
-> **与领域模型的关系：** `RegisterRequest` 与 `feel_entity::user::models::UserRegister` 字段一致，
+> **与领域模型的关系：** `RegisterRequest` 与 `feel_entity::user::UserRegister` 字段一致，
 > 是 API 层专用的 DTO。后续可在 DTO 上添加校验注解而不影响领域层。
 > 参见 [model/user.md](model/user.md)。
 
@@ -129,7 +129,7 @@ pub struct RegisterResponse {
 }
 ```
 
-> **与领域模型的差异：** `RegisterResponse` 相比 `feel_entity::user::models::UserBase`，
+> **与领域模型的差异：** `RegisterResponse` 相比 `feel_entity::user::UserBase`，
 > 时间字段使用 `String` 而非 `DateTime<Utc>`，将时区格式化交给序列化层。
 > 参见 [model/user.md](model/user.md) 和 [model/response.md](model/response.md)。
 
@@ -158,7 +158,7 @@ let txn = self.conn.begin().await.map_err(Error::from)?;
 使用 `UserActiveModel` 构建插入数据，`uid` 由 `UserId::generate()` 生成：
 
 ```rust
-use feel_entity::user::models::UserId;
+use feel_entity::user::UserId;
 
 let uid = UserId::generate();
 ```
@@ -240,7 +240,7 @@ use feel_api::model::{
     response::ok,
     user::{RegisterRequest, RegisterResponse},
 };
-use feel_entity::user::models::UserRegister;
+use feel_entity::user::UserRegister;
 use poem::{Data, handler, post, web::Json};
 
 #[handler]

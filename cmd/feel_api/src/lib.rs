@@ -5,6 +5,7 @@ use feel_storage::{
     database::{CommonUserDataBase, UserDataBase},
     repo::SeaOrmUserRepo,
 };
+use migration::MigratorTrait;
 use poem::Route;
 use sea_orm::Database;
 use std::sync::Arc;
@@ -30,6 +31,11 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
     let conn = Database::connect(&config.database_url)
         .await
         .expect("Database connect failed.");
+
+    // 执行数据库迁移
+    migration::Migrator::up(&conn, None)
+        .await
+        .expect("Database migration failed.");
 
     let user_repo = SeaOrmUserRepo::new(conn);
 

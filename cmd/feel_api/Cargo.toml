@@ -7,6 +7,7 @@ edition = "2024"
 feel_entity = { path = "../../crates/feel_entity" }
 feel_storage = { path = "../../crates/feel_storage" }
 feel_core = { path = "../../crates/feel_core" }
+migration = { path = "../../crates/migration" }
 
 poem = { version = "3.1" }
 sea-orm.workspace = true

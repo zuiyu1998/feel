@@ -14,7 +14,8 @@ impl MigrationTrait for Migration {
                 ColumnDef::new(UserColumn::Id)
                     .big_integer()
                     .not_null()
-                    .primary_key(),
+                    .primary_key()
+                    .auto_increment(),
             )
             .col(
                 ColumnDef::new(UserColumn::Uid)
@@ -24,11 +25,34 @@ impl MigrationTrait for Migration {
             )
             .col(ColumnDef::new(UserColumn::Name).string().not_null())
             .col(ColumnDef::new(UserColumn::Avatar).string().not_null())
-            .col(ColumnDef::new(UserColumn::Slogan).string().not_null())
-            .col(ColumnDef::new(UserColumn::IsEnable).boolean().not_null())
-            .col(ColumnDef::new(UserColumn::IsDelete).boolean().not_null())
-            .col(ColumnDef::new(UserColumn::CreatedAt).timestamp().not_null())
-            .col(ColumnDef::new(UserColumn::UpdatedAt).timestamp().not_null())
+            .col(
+                ColumnDef::new(UserColumn::Slogan)
+                    .string()
+                    .not_null()
+                    .default(""),
+            )
+            .col(
+                ColumnDef::new(UserColumn::IsEnable)
+                    .boolean()
+                    .not_null()
+                    .default(true),
+            )
+            .col(
+                ColumnDef::new(UserColumn::IsDelete)
+                    .boolean()
+                    .not_null()
+                    .default(false),
+            )
+            .col(
+                ColumnDef::new(UserColumn::CreatedAt)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(UserColumn::UpdatedAt)
+                    .timestamp_with_time_zone()
+                    .not_null(),
+            )
             .to_owned();
 
         manager.create_table(table).await

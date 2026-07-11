@@ -817,6 +817,7 @@ dependencies = [
  "feel_core",
  "feel_entity",
  "feel_storage",
+ "migration",
  "poem",
  "sea-orm",
  "serde",

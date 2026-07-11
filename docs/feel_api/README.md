@@ -12,6 +12,10 @@
 cmd/feel_api/src/
 ├── main.rs      # 入口：启动 HTTP 服务器
 ├── lib.rs       # 路由、AppState、ApiConfig
+├── model/       # API 专用 DTO（请求/响应数据模型）
+│   ├── mod.rs
+│   ├── user.rs      # 用户接口 DTO
+│   └── response.rs  # 通用响应封装 ApiResponse<T>
 └── user/
     └── mod.rs   # 用户相关接口
 ```
@@ -52,19 +56,22 @@ pub struct AppState {
 
 所有接口挂载在 `/api/v1` 前缀下：
 
-| 方法 | 路径                        | Handler     | 描述         |
-|------|-----------------------------|-------------|--------------|
-| POST | `/api/v1/user/register`     | `register`  | 注册用户     |
-| POST | `/api/v1/user/unregister`   | `unregister`| 注销用户     |
-| POST | `/api/v1/user/login`        | `login`     | 用户登录     |
-| POST | `/api/v1/user/logout`       | `logout`    | 用户登出     |
+| 方法 | 路径                                | Handler       | 描述         | 状态 |
+|------|-------------------------------------|---------------|--------------|------|
+| POST | `/api/v1/user/register`             | `register`    | 注册用户     | ✅ 已实现 |
+| POST | `/api/v1/user/unregister/:user_id`  | `unregister`  | 注销用户     | ✅ 已实现 |
+| POST | `/api/v1/user/login`                | `login`       | 用户登录     | 🚧 占位 |
+| POST | `/api/v1/user/logout`               | `logout`      | 用户登出     | 🚧 占位 |
 
-> 当前 Handler 均为占位实现（空函数），功能待填充。
+> `register` 和 `unregister` 已接入 `AppState` 和 `feel_storage`，包含错误处理。
+> `login` 和 `logout` 仍为占位实现。
 
 ## 架构说明
 
 ```
 feel_api (HTTP 路由 & Handler)
+    │
+    ├── migration (自动执行数据库迁移)
     │
     ▼
 feel_storage (数据库操作接口 + 缓存)
@@ -76,6 +83,7 @@ feel_sea_orm (Sea-ORM 实体 / 查询)
   PostgreSQL
 ```
 
-- `feel_api` 依赖 `feel_storage` 和 `feel_core`
+- `feel_api` 依赖 `feel_storage`、`feel_core` 和 `migration`
 - `feel_storage` 中的 `UserRepo` trait 提供了数据访问抽象
 - `UserDataBase` 封装了 `UserRepo` 并包含缓存逻辑
+- 启动时 `init_app_state()` 自动执行数据库迁移（`migration::Migrator::up`）

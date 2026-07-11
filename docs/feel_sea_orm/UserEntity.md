@@ -78,8 +78,8 @@ pub struct Model {
 | `slogan`     | `String`           | —                                     | 用户签名/简介              |
 | `is_enable`  | `bool`             | —                                     | 是否启用                   |
 | `is_delete`  | `bool`             | —                                     | 软删除标记                 |
-| `created_at` | `DateTime<Utc>`    | —                                     | 记录创建时间               |
-| `updated_at` | `DateTime<Utc>`    | —                                     | 最后更新时间               |
+| `created_at` | `DateTime<Utc>`    | —                                     | 记录创建时间（存储为 `TIMESTAMPTZ`） |
+| `updated_at` | `DateTime<Utc>`    | —                                     | 最后更新时间（存储为 `TIMESTAMPTZ`） |
 
 ### DDL 对应（PostgreSQL）
 
@@ -90,7 +90,7 @@ CREATE TABLE users (
     name       VARCHAR      NOT NULL,
     avatar     VARCHAR      NOT NULL,
     slogan     VARCHAR      NOT NULL DEFAULT '',
-    is_enable  BOOLEAN      NOT NULL DEFAULT false,
+    is_enable  BOOLEAN      NOT NULL DEFAULT true,
     is_delete  BOOLEAN      NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ  NOT NULL,
     updated_at TIMESTAMPTZ  NOT NULL

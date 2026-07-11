@@ -16,7 +16,8 @@ impl MigrationTrait for Migration {
                 ColumnDef::new(UserCredentialsColumn::Id)
                     .big_integer()
                     .not_null()
-                    .primary_key(),
+                    .primary_key()
+                    .auto_increment(),
             )
             .col(
                 ColumnDef::new(UserCredentialsColumn::UserUid)
@@ -44,21 +45,21 @@ impl MigrationTrait for Migration {
                     .not_null(),
             )
             .col(
-                ColumnDef::new(UserCredentialsColumn::Enabled)
+                ColumnDef::new(UserCredentialsColumn::IsEnabled)
                     .boolean()
-                    .not_null(),
+                    .not_null()
+                    .default(true),
             )
             .col(
                 ColumnDef::new(UserCredentialsColumn::CreatedAt)
-                    .timestamp()
+                    .timestamp_with_time_zone()
                     .not_null(),
             )
             .col(
                 ColumnDef::new(UserCredentialsColumn::UpdatedAt)
-                    .timestamp()
+                    .timestamp_with_time_zone()
                     .not_null(),
             )
-            .primary_key(Index::create().col(UserCredentialsColumn::Id))
             .index(
                 &mut Index::create()
                     .name("idx_user_credentials_user_uid_credential_name")
