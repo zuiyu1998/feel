@@ -12,6 +12,7 @@
 //! | [`CODE_NOT_FOUND`] | 10004 | 请求的资源不存在 |
 //! | [`CODE_REDIS_ERROR`] | 10001 | Redis 操作异常 |
 //! | [`CODE_JSON_ERROR`] | 10002 | JSON 序列化/反序列化错误 |
+//! | [`CODE_AUTH_ERROR`] | 10005 | 认证失败（凭据无效/token 错误） |
 
 use feel_storage::error::Error as StorageError;
 use poem::web::Json;
@@ -34,6 +35,9 @@ pub const CODE_REDIS_ERROR: i32 = 10001;
 
 /// JSON 序列化/反序列化错误。
 pub const CODE_JSON_ERROR: i32 = 10002;
+
+/// 认证失败（凭据无效/token 错误）。
+pub const CODE_AUTH_ERROR: i32 = 10005;
 
 /// 泛型 API 响应结构体。
 ///
@@ -105,6 +109,7 @@ pub fn from_storage_error<T: Serialize>(e: StorageError) -> Json<ApiResponse<T>>
             sea_orm::DbErr::RecordNotFound(_) => CODE_NOT_FOUND,
             _ => CODE_DB_ERROR,
         },
+        StorageError::Authentication(_) => CODE_AUTH_ERROR,
     };
     err(code, e.to_string())
 }

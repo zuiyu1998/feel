@@ -1,11 +1,15 @@
-use crate::{Result, repo::UserRepo, utils::get_passwod_hash};
+use crate::{Error, Result, repo::UserRepo, utils::get_passwod_hash};
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHash, PasswordVerifier},
+};
 use async_trait::async_trait;
 use chrono::Local;
 use feel_entity::prelude::*;
 use feel_sea_orm::user::entities::prelude::*;
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::Set, DatabaseConnection, EntityTrait, IntoActiveModel,
-    TransactionTrait,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait,
+    IntoActiveModel, QueryFilter, TransactionTrait,
 };
 
 typedflake::id!(UserId);
@@ -72,11 +76,50 @@ impl UserRepo for SeaOrmUserRepo {
         Ok(updated_user.into())
     }
 
-    fn login(&self, _login: &UserLogin) -> Result<String> {
-        todo!()
+    async fn login(&self, login: &UserLogin) -> Result<UserBase> {
+        // 1. Find credential by credential_name
+        let credential = UserCredentialsEntity::find()
+            .filter(UserCredentialsColumn::CredentialName.eq(&login.credential_name))
+            .one(&self.conn)
+            .await?
+            .ok_or_else(|| Error::Authentication("Credential not found".into()))?;
+
+        // 2. Verify password with argon2
+        let parsed_hash = PasswordHash::new(&credential.encrypted_data)
+            .map_err(|e| Error::Authentication(format!("Invalid password hash: {}", e)))?;
+
+        Argon2::default()
+            .verify_password(login.data.as_bytes(), &parsed_hash)
+            .map_err(|_| Error::Authentication("Invalid password".into()))?;
+
+        // 3. Find user by user_uid and return user data (token generation is in CommonUserDataBase)
+        UserEntity::find()
+            .filter(UserColumn::Uid.eq(&credential.user_uid))
+            .one(&self.conn)
+            .await?
+            .ok_or_else(|| Error::Authentication("User not found".into()))
+            .map(|user| user.into())
     }
 
     fn update(&self, _update: &UserUpdate) -> Result<UserBase> {
         todo!()
+    }
+
+    async fn find_by_credential_name(&self, credential_name: &str) -> Result<Option<UserBase>> {
+        let credential = UserCredentialsEntity::find()
+            .filter(UserCredentialsColumn::CredentialName.eq(credential_name))
+            .one(&self.conn)
+            .await?;
+
+        match credential {
+            Some(cred) => {
+                let user = UserEntity::find()
+                    .filter(UserColumn::Uid.eq(cred.user_uid))
+                    .one(&self.conn)
+                    .await?;
+                Ok(user.map(|u| u.into()))
+            }
+            None => Ok(None),
+        }
     }
 }

@@ -21,3 +21,4 @@ sea-orm = { version = "1.0", features = [
     "sqlx-postgres",
 ] }
 async-trait = "0.1"
+jsonwebtoken = "9"

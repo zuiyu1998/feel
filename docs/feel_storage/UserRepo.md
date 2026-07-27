@@ -25,10 +25,13 @@ pub trait UserRepo: 'static + Send + Sync {
     async fn unregister(&self, user_id: i64) -> Result<UserBase>;
 
     /// 用户登录系统
-    fn login(&self, login: &UserLogin) -> Result<String>;
+    async fn login(&self, login: &UserLogin) -> Result<LoginResult>;
 
     /// 用户系统更改个人信息
     fn update(&self, update: &UserUpdate) -> Result<UserBase>;
+
+    /// 根据凭据名称查找用户
+    async fn find_by_credential_name(&self, credential_name: &str) -> Result<Option<UserBase>>;
 }
 ```
 
@@ -46,10 +49,24 @@ pub trait UserRepo: 'static + Send + Sync {
 | ------------ | ----------------------- | --------------------- | -------------------------- |
 | `register`   | `&UserRegister`         | `Result<UserBase>`    | 注册新用户（**async**）    |
 | `unregister` | `user_id: i64`          | `Result<UserBase>`    | 注销指定用户               |
-| `login`      | `&UserLogin`            | `Result<String>`      | 用户登录，返回 token       |
+| `login`      | `&UserLogin`            | `Result<LoginResult>` | 用户登录，返回 token+用户  |
 | `update`     | `&UserUpdate`           | `Result<UserBase>`    | 更新用户个人信息           |
+| `find_by_credential_name` | `credential_name: &str` | `Result<Option<UserBase>>` | 凭据名查用户（**async**） |
 
 > **注意：** `UserRepo` 不包含 `logout` 方法——登出属于会话层逻辑，不在持久化层处理。
+
+### LoginResult
+
+`login` 方法返回 `LoginResult` 结构体，同时携带认证令牌和用户数据：
+
+```rust
+pub struct LoginResult {
+    pub token: String,       // 认证令牌
+    pub user_base: UserBase, // 登录用户的完整数据
+}
+```
+
+调用方一次性获得令牌和用户信息，无需再次查询数据库。`CommonUserDataBase` 在获取 `LoginResult` 后会将其中的 `user_base` 写入 Redis 缓存。
 
 ---
 
@@ -220,3 +237,4 @@ let user = repo.register(&register).await.unwrap();
 | `unregister` | ✅ 完整   | 软删除：仅将 is_delete 置为 true，保留数据完整性 |
 | login      | 🚧 占位   | `todo!()`                                      |
 | update     | 🚧 占位   | `todo!()`                                      |
+| `find_by_credential_name` | ✅ 完整   | 凭据名 → user_uid → 用户数据查找               |

@@ -481,21 +481,217 @@ async fn unregister(
 
 ### 当前状态
 
-占位（Handler 为空）。
+**Handler 已实现**，完整接入 `AppState` 和下层存储逻辑。
 
 ```rust
 #[handler]
-async fn login() {}
+async fn login(
+    state: Data<&AppState>,
+    body: Json<LoginRequest>,
+) -> Json<ApiResponse<LoginResponse>> {
+    // 1. DTO → 领域模型转换
+    let user_login = UserLogin {
+        credential_name: body.0.credential_name,
+        data: body.0.data,
+    };
+
+    // 2. 调用领域层
+    let login_result = match state.user_database.login(&user_login).await {
+        Ok(result) => result,
+        Err(e) => return from_storage_error(e),
+    };
+
+    // 3. 领域模型 → DTO 转换 + 统一响应包装
+    let response = LoginResponse {
+        token: login_result.token,
+    };
+
+    ok(response)
+}
 ```
 
-### 下层 trait 签名
+### 接口流程
+
+```
+HTTP POST /api/v1/user/login  (Json<LoginRequest>)
+  → login handler
+    → 将 LoginRequest 转换为 UserLogin（领域模型）
+    → AppState.user_database.login(&user_login)          [UserDataBase trait]
+      → CommonUserDataBase.login()                         [三层处理]
+        ├─ 1. SeaOrmUserRepo.login()                      [UserRepo — 数据库认证]
+        │     ├─ 1a. 按 credential_name 查询 user_credentials 表
+        │     ├─ 1b. Argon2 校验密码
+        │     ├─ 1c. 按 user_uid 查询 users 表
+        │     └─ 1d. 返回 UserBase
+        ├─ 2. generate_token()                             [JWT 生成]
+        │     ├─ 载荷: Claims { sub: uid, iat, exp(7天) }
+        │     └─ 签名: HS256 + jwt_secret
+        └─ 3. user_cache.set_user_base()                   [Redis 缓存]
+    → 将 LoginResult 映射为 LoginResponse（仅含 token）
+    → 用 ok() 包装为 ApiResponse<LoginResponse> 返回
+```
+
+### 请求类型 — `LoginRequest`
+
+定义在 `cmd/feel_api/src/model/user.rs`。
 
 ```rust
-fn login(&self, login: &UserLogin) -> Result<String>;
+#[derive(Debug, Deserialize)]
+pub struct LoginRequest {
+    pub credential_name: String,
+    pub data: String,
+}
 ```
 
-- `UserLogin` 定义位于 `crates/feel_entity/src/user/models/mod.rs`，当前为**空结构体**，尚未填充字段。
-- 返回 `String`，预期为登录凭证（如 token）。
+| 字段              | 类型     | 说明                            |
+|-------------------|----------|---------------------------------|
+| `credential_name` | `String` | 凭证名称（如邮箱地址、手机号）  |
+| `data`            | `String` | 凭证数据（如密码原文）          |
+
+> **与领域模型的关系：** `LoginRequest` 与 `feel_entity::user::UserLogin` 字段一致。
+> 参见 [model/user.md](model/user.md)。
+
+**JSON 示例：**
+
+```json
+{
+    "credential_name": "alice@example.com",
+    "data": "my_password"
+}
+```
+
+### 响应类型 — `ApiResponse<LoginResponse>`
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    pub token: String,
+}
+```
+
+| 字段            | 类型              | 说明                     |
+|-----------------|-------------------|--------------------------|
+| `code`          | `i32`             | 业务状态码（0 表示成功） |
+| `message`       | `String`          | 提示消息                 |
+| `data.token`    | `String`          | JWT 认证令牌             |
+
+**JSON 示例（成功）：**
+
+```json
+{
+    "code": 0,
+    "message": "ok",
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1aWRfYWJjMTIzIiwiaWF0IjoxNzUwMDAwMDAwLCJleHAiOjE3NTA2MDAwMDB9.abc123"
+    }
+}
+```
+
+**JSON 示例（认证失败）：**
+
+```json
+{
+    "code": 10005,
+    "message": "Authentication error: Invalid credential",
+    "data": null
+}
+```
+
+### 错误码映射
+
+| 错误类型                            | 状态码     | 说明                     |
+|-------------------------------------|------------|--------------------------|
+| `StorageError::Authentication(_)`   | `10005`    | 认证失败（凭据无效）     |
+| `StorageError::Redis(_)`            | `10001`    | Redis 缓存异常           |
+| `StorageError::Db(_)`               | `10003`    | 数据库操作异常           |
+
+### 下层调用链
+
+```
+login handler (已实现)
+  ↓ UserDataBase::login(&UserLogin)
+CommonUserDataBase::login()
+  ├─ 1. user_repo.login(login)          → UserBase
+  ├─ 2. generate_token(&user_base.uid)  → String (JWT)
+  └─ 3. user_cache.set_user_base(&user_base) → ()
+  └─ Ok(LoginResult { token, user_base })
+```
+
+**CommonUserDataBase::login()** 位于 `crates/feel_storage/src/database/user.rs:66-77`。
+
+**SeaOrmUserRepo::login()** 位于 `crates/feel_storage/src/repo/user.rs:79-102`，具体步骤：
+
+#### 步骤 1：查询凭证
+
+```rust
+let credential = UserCredentialsEntity::find()
+    .filter(UserCredentialsColumn::CredentialName.eq(&login.credential_name))
+    .one(&self.conn)
+    .await?
+    .ok_or_else(|| {
+        sea_orm::DbErr::RecordNotFound(
+            format!("Credential '{}' not found", login.credential_name)
+        )
+    })?;
+```
+
+- 按 `credential_name` 在 `user_credentials` 表中查找
+- 若不存在返回 `RecordNotFound` 错误
+
+#### 步骤 2：Argon2 密码校验
+
+```rust
+let argon2 = Argon2::default();
+argon2.verify_password(
+    login.data.as_bytes(),
+    &PasswordHash::new(&credential.encrypted_data)?,
+)?;
+```
+
+- 使用 `argon2` crate 的 `verify_password` 方法
+- 校验失败返回 `Authentication` 错误
+
+#### 步骤 3：查找用户
+
+```rust
+let user = UserEntity::find()
+    .filter(UserColumn::Uid.eq(&credential.user_uid))
+    .one(&self.conn)
+    .await?
+    .ok_or_else(|| {
+        sea_orm::DbErr::RecordNotFound(
+            format!("User '{}' not found", credential.user_uid)
+        )
+    })?;
+
+Ok(user.into())
+```
+
+- 按 `credential.user_uid` 在 `users` 表中查找
+- 通过 `From<Model> for UserBase` 转换为领域模型返回
+
+### JWT Token 详情
+
+Token 由 `CommonUserDataBase::generate_token()` 生成，详情如下：
+
+| 项目       | 值                          |
+|------------|-----------------------------|
+| 算法       | HS256                       |
+| 载荷 sub   | 用户 `uid`（如 `uid_abc`） |
+| 有效期     | 7 天                        |
+| 签名密钥   | `jwt_secret`（`ApiConfig` 配置） |
+
+### 涉及的 crate 依赖
+
+| crate / 模块                | 作用                                    |
+|-----------------------------|-----------------------------------------|
+| `feel_api::model`           | API DTO（`LoginRequest`、`LoginResponse`、`ApiResponse`）|
+| `feel_entity`               | 领域模型（`UserLogin`、`LoginResult`） |
+| `feel_storage`              | 提供 `UserDataBase` trait 及其实现     |
+| `feel_storage::cache`       | Redis 用户缓存（`UserCache`）           |
+| `feel_sea_orm`              | Sea-ORM 实体（`users`、`user_credentials` 表） |
+| `argon2`                    | 密码哈希校验                            |
+| `jsonwebtoken`              | JWT 签发（通过 `feel_storage` 依赖）   |
 
 ---
 

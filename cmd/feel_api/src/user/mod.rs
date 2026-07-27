@@ -1,7 +1,7 @@
 use crate::AppState;
 use crate::model::response::{ApiResponse, from_storage_error, ok};
-use crate::model::user::{RegisterRequest, RegisterResponse};
-use feel_entity::user::UserRegister;
+use crate::model::user::{LoginRequest, LoginResponse, RegisterRequest, RegisterResponse};
+use feel_entity::user::{UserLogin, UserRegister};
 use poem::web::{Data, Json, Path};
 use poem::{Route, handler, post};
 
@@ -78,10 +78,34 @@ async fn unregister(
     ok(response)
 }
 
-// -- login / logout (stubs) --
+// -- login --
 
 #[handler]
-async fn login() {}
+async fn login(
+    state: Data<&AppState>,
+    body: Json<LoginRequest>,
+) -> Json<ApiResponse<LoginResponse>> {
+    // 1. DTO → 领域模型转换
+    let user_login = UserLogin {
+        credential_name: body.0.credential_name,
+        data: body.0.data,
+    };
+
+    // 2. 调用领域层
+    let login_result = match state.user_database.login(&user_login).await {
+        Ok(result) => result,
+        Err(e) => return from_storage_error(e),
+    };
+
+    // 3. 领域模型 → DTO 转换 + 统一响应包装
+    let response = LoginResponse {
+        token: login_result.token,
+    };
+
+    ok(response)
+}
+
+// -- logout (stub) --
 
 #[handler]
 async fn logout() {}

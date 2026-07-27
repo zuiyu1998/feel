@@ -10,6 +10,7 @@ feel_core = { path = "../../crates/feel_core" }
 migration = { path = "../../crates/migration" }
 
 poem = { version = "3.1" }
+redis = { version = "0.25", features = ["tokio-comp"] }
 sea-orm.workspace = true
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"

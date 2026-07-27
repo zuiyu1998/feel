@@ -13,7 +13,9 @@ pub trait UserRepo: 'static + Send + Sync {
     ///用户系统注销用户
     async fn unregister(&self, user_id: i64) -> Result<UserBase>;
     ///用户登录系统
-    fn login(&self, login: &UserLogin) -> Result<String>;
+    async fn login(&self, login: &UserLogin) -> Result<UserBase>;
     ///用户系统更改个人信息
     fn update(&self, update: &UserUpdate) -> Result<UserBase>;
+    ///根据凭据名称查找用户
+    async fn find_by_credential_name(&self, credential_name: &str) -> Result<Option<UserBase>>;
 }

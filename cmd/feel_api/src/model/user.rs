@@ -32,4 +32,15 @@ pub struct RegisterResponse {
     pub updated_at: String,
 }
 
-// TODO: 按需添加登录/登出/注销等接口的 DTO
+/// 登录请求体
+#[derive(Debug, Deserialize)]
+pub struct LoginRequest {
+    pub credential_name: String,
+    pub data: String,
+}
+
+/// 登录成功响应体
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    pub token: String,
+}

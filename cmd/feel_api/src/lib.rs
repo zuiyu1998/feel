@@ -2,6 +2,7 @@ pub mod model;
 pub mod user;
 
 use feel_storage::{
+    cache::user::CommonUserCache,
     database::{CommonUserDataBase, UserDataBase},
     repo::SeaOrmUserRepo,
 };
@@ -12,12 +13,16 @@ use std::sync::Arc;
 
 pub struct ApiConfig {
     pub database_url: String,
+    pub redis_url: String,
+    pub jwt_secret: String,
 }
 
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
             database_url: "postgresql://postgres:bj123456@192.168.0.107:5432/feel".to_string(),
+            redis_url: "redis://192.168.0.107:6379".to_string(),
+            jwt_secret: "feel-jwt-secret".to_string(),
         }
     }
 }
@@ -39,7 +44,15 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
 
     let user_repo = SeaOrmUserRepo::new(conn);
 
-    let user_database = Arc::new(CommonUserDataBase::new(user_repo));
+    let redis_client =
+        redis::Client::open(&*config.redis_url).expect("Redis client create failed.");
+    let user_cache = Box::new(CommonUserCache::new(redis_client));
+
+    let user_database = Arc::new(CommonUserDataBase::new(
+        user_repo,
+        user_cache,
+        &config.jwt_secret,
+    ));
 
     AppState { user_database }
 }

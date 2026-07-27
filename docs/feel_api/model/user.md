@@ -93,11 +93,63 @@ pub struct RegisterResponse {
 }
 ```
 
+### LoginRequest
+
+登录请求体。
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct LoginRequest {
+    pub credential_name: String,
+    pub data: String,
+}
+```
+
+| 字段              | 类型     | 说明                              |
+|-------------------|----------|-----------------------------------|
+| `credential_name` | `String` | 凭证名称（如邮箱地址、手机号）    |
+| `data`            | `String` | 凭证数据（如密码原文）            |
+
+**与领域模型的对应关系：**
+
+与 `feel_entity::user::models::UserLogin` 字段一致，直接映射到领域层。
+
+**JSON 示例：**
+
+```json
+{
+    "credential_name": "alice@example.com",
+    "data": "my_password"
+}
+```
+
+### LoginResponse
+
+登录成功响应体，仅返回 JWT token。
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    pub token: String,
+}
+```
+
+| 字段    | 类型     | 说明           |
+|---------|----------|----------------|
+| `token` | `String` | JWT 认证令牌   |
+
+**JSON 示例：**
+
+```json
+{
+    "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1aWRfYWJjMTIzIiwiaWF0IjoxNzUwMDAwMDAwLCJleHAiOjE3NTA2MDAwMDB9.abc123"
+}
+```
+
 ## 后续扩展
 
 当前 `user.rs` 末尾留有 TODO 标记，后续可按需添加：
 
-- `LoginRequest` / `LoginResponse`
 - `UnregisterRequest` / `UnregisterResponse`
 - `LogoutRequest` / `LogoutResponse`
 - 通用的分页/错误响应包装类型

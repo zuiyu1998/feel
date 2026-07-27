@@ -26,7 +26,7 @@ pub trait UserDataBase: 'static + Send + Sync {
     fn unregister(&self, user_id: i64) -> Result<UserBase>;
 
     /// 用户登录系统
-    fn login(&self, login: &UserLogin) -> Result<String>;
+    async fn login(&self, login: &UserLogin) -> Result<LoginResult>;
 
     /// 用户登出系统
     fn logout(&self, user_id: u32) -> Result<()>;
@@ -51,7 +51,7 @@ pub trait UserDataBase: 'static + Send + Sync {
 | ------------ | ----------------------- | --------------------- | -------------------------- |
 | `register`   | `&UserRegister`         | `Result<UserBase>`    | 注册新用户（**async**）    |
 | `unregister` | `user_id: i64`          | `Result<UserBase>`    | 注销指定用户               |
-| `login`      | `&UserLogin`            | `Result<String>`      | 用户登录，返回 token       |
+| `login`      | `&UserLogin`            | `Result<LoginResult>` | 用户登录，返回 token+用户数据 |
 | `logout`     | `user_id: u32`          | `Result<()>`          | 用户登出                   |
 | `update`     | `&UserUpdate`           | `Result<UserBase>`    | 更新用户个人信息           |
 
@@ -169,11 +169,20 @@ pub struct UserRegister {
 }
 ```
 
-### UserLogin / UserUpdate
+### UserLogin / LoginResult / UserUpdate
 
 ```rust
-pub struct UserLogin {}     // 登录请求体（暂未定义字段）
-pub struct UserUpdate {}    // 更新请求体（暂未定义字段）
+pub struct UserLogin {
+    pub credential_name: String,  // 凭据标识（如邮箱/手机号）
+    pub data: String,             // 凭据数据（如密码）
+}
+
+pub struct LoginResult {
+    pub token: String,       // 认证令牌
+    pub user_base: UserBase, // 登录用户完整数据
+}
+
+pub struct UserUpdate {}     // 更新请求体（暂未定义字段）
 ```
 
 ### UserCredential
@@ -225,6 +234,6 @@ let user = user_db.register(&register).await.unwrap();
 | ---------- | -------- | ---------------------------------------- |
 | register   | ✅ 完整   | async 实现，委托 UserRepo.register       |
 | unregister | ✅ 完整   | 委托 UserRepo.unregister，软删除           |
-| login      | 🚧 占位   | `todo!()`                                |
+| login      | ✅ 完整   | async 委托，返回 LoginResult，缓存 user_base |
 | logout     | 🚧 占位   | `todo!()`                                |
 | update     | 🚧 占位   | `todo!()`                                |

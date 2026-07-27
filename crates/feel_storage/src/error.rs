@@ -8,6 +8,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("Database error: {0}")]
     Db(#[from] sea_orm::DbErr),
+    #[error("Authentication error: {0}")]
+    Authentication(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

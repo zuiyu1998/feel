@@ -5,4 +5,4 @@ pub mod utils;
 
 pub mod error;
 
-pub use error::Result;
+pub use error::{Error, Result};

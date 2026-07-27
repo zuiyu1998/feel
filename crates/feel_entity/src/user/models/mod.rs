@@ -36,8 +36,25 @@ pub struct UserRegister {
     pub data: String,
 }
 
-pub struct UserLogin {}
+/// User login request (identifying credentials)
+#[derive(Debug, Clone)]
+pub struct UserLogin {
+    /// Credential name/identifier (e.g., email address or phone number)
+    pub credential_name: String,
+    /// Credential data (e.g., password) to verify
+    pub data: String,
+}
 
+/// Result of a successful login, containing the auth token and user data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LoginResult {
+    /// Authentication token
+    pub token: String,
+    /// Authenticated user data
+    pub user_base: UserBase,
+}
+
+/// User update request (placeholder)
 pub struct UserUpdate {}
 
 /// User credential entity for authentication
