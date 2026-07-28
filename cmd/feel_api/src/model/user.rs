@@ -44,3 +44,16 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     pub token: String,
 }
+
+/// 用户信息响应体（用于 GET /user/info）
+#[derive(Debug, Serialize)]
+pub struct UserInfoResponse {
+    pub id: i64,
+    pub uid: String,
+    pub name: String,
+    pub avatar: String,
+    pub slogan: String,
+    pub enabled: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}

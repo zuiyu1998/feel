@@ -146,6 +146,50 @@ pub struct LoginResponse {
 }
 ```
 
+### UserInfoResponse
+
+获取用户信息响应体，与 `RegisterResponse` 字段一致。
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct UserInfoResponse {
+    pub id: i64,
+    pub uid: String,
+    pub name: String,
+    pub avatar: String,
+    pub slogan: String,
+    pub enabled: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+```
+
+| 字段         | 类型     | 说明                        |
+|--------------|----------|-----------------------------|
+| `id`         | `i64`    | 自增主键                    |
+| `uid`        | `String` | 全局唯一标识符（业务键）    |
+| `name`       | `String` | 用户昵称                    |
+| `avatar`     | `String` | 头像 URL                    |
+| `slogan`     | `String` | 用户签名                    |
+| `enabled`    | `bool`   | 是否启用                    |
+| `created_at` | `String` | 创建时间（ISO 8601 字符串） |
+| `updated_at` | `String` | 更新时间（ISO 8601 字符串） |
+
+**JSON 示例：**
+
+```json
+{
+    "id": 1,
+    "uid": "uid_abc123",
+    "name": "张三",
+    "avatar": "https://example.com/avatar.png",
+    "slogan": "",
+    "enabled": true,
+    "created_at": "2026-07-11T03:00:00Z",
+    "updated_at": "2026-07-11T03:00:00Z"
+}
+```
+
 ## 后续扩展
 
 当前 `user.rs` 末尾留有 TODO 标记，后续可按需添加：

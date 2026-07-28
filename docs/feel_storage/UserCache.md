@@ -23,7 +23,7 @@ pub trait UserCache: 'static + Send + Sync {
     async fn set_user_base(&self, user_base: &UserBase) -> Result<()>;
 
     /// 从缓存获取用户基础信息
-    async fn get_user_base(&self, user_id: u32) -> Result<Option<UserBase>>;
+    async fn get_user_base(&self, user_id: &str) -> Result<Option<UserBase>>;
 }
 ```
 
@@ -41,7 +41,7 @@ pub trait UserCache: 'static + Send + Sync {
 | 方法             | 参数                    | 返回                       | 说明                       |
 | ---------------- | ----------------------- | -------------------------- | -------------------------- |
 | `set_user_base`  | `&UserBase`             | `Result<()>`               | 将用户基础信息写入缓存     |
-| `get_user_base`  | `user_id: u32`          | `Result<Option<UserBase>>` | 从缓存读取用户基础信息     |
+| `get_user_base`  | `user_id: &str`          | `Result<Option<UserBase>>` | 从缓存读取用户基础信息     |
 
 ---
 
@@ -85,7 +85,7 @@ impl CommonUserCache {
 ├───────────────────────────────────────────────────┤
 │  1. 获取 Redis 异步连接                            │
 │  2. serde_json::to_string(user_base) 序列化为 JSON │
-│  3. HSET users <user_id> <json> 写入 Redis Hash    │
+│  3. HSET users <uid> <json> 写入 Redis Hash    │
 │  4. 返回 Ok(())                                    │
 └───────────────────────────────────────────────────┘
 ```
@@ -94,7 +94,7 @@ impl CommonUserCache {
 
 ```
 ┌───────────────────────────────────────────────────┐
-│ get_user_base(&self, user_id: u32)                │
+│ get_user_base(&self, user_id: &str)                │
 ├───────────────────────────────────────────────────┤
 │  1. 获取 Redis 异步连接                            │
 │  2. HGET users <user_id> 读取 Redis Hash           │
@@ -111,12 +111,12 @@ impl CommonUserCache {
 Redis Key: "users" (Hash 类型)
 
 ┌──────────────┬──────────────────────────────────────┐
-│ Field (user_id)  │ Value (JSON 序列化的 UserBase)    │
+│ Field (uid)        │ Value (JSON 序列化的 UserBase)    │
 ├──────────────┼──────────────────────────────────────┤
-│ "1"          │ {"id":1,"uid":"...","name":"Alice",  │
+│ "usr_abc123" │ {"id":1,"uid":"usr_abc123","name":"Alice",  │
 │              │  "avatar":"...","slogan":"...", ...}  │
 ├──────────────┼──────────────────────────────────────┤
-│ "2"          │ {"id":2,"uid":"...","name":"Bob",    │
+│ "usr_def456" │ {"id":2,"uid":"usr_def456","name":"Bob",    │
 │              │  "avatar":"...","slogan":"...", ...}  │
 └──────────────┴──────────────────────────────────────┘
 ```
@@ -150,7 +150,7 @@ Redis Key: "users" (Hash 类型)
 ┌──────────────────────────────────────────────┐
 │              Redis                             │
 │     Key: "users" (Hash)                       │
-│     Field: user_id → JSON(UserBase)           │
+│     Field: uid → JSON(UserBase)           │
 └──────────────────────────────────────────────┘
 ```
 
@@ -208,7 +208,7 @@ let user = UserBase { /* ... */ };
 cache.set_user_base(&user).await.unwrap();
 
 // 读取缓存
-if let Some(cached_user) = cache.get_user_base(42).await.unwrap() {
+if let Some(cached_user) = cache.get_user_base("usr_abc123").await.unwrap() {
     println!("从缓存命中用户: {}", cached_user.name);
 } else {
     println!("缓存未命中，需要从数据库查询");
@@ -218,7 +218,7 @@ if let Some(cached_user) = cache.get_user_base(42).await.unwrap() {
 ### 典型缓存模式（Cache-Aside）
 
 ```rust
-async fn get_user(user_id: u32, cache: &dyn UserCache, repo: &dyn UserRepo) -> UserBase {
+async fn get_user(user_id: &str, cache: &dyn UserCache, repo: &dyn UserRepo) -> UserBase {
     // 1. 先查缓存
     if let Some(user) = cache.get_user_base(user_id).await.unwrap() {
         return user;

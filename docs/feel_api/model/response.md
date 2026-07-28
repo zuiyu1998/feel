@@ -16,6 +16,7 @@
 | [`CODE_JSON_ERROR`] | `10002` | JSON 序列化/反序列化错误 |
 | [`CODE_DB_ERROR`] | `10003` | 数据库操作异常 |
 | [`CODE_NOT_FOUND`] | `10004` | 请求的资源不存在 |
+| [`CODE_AUTH_ERROR`] | `10005` | 认证失败（token 无效/凭据错误） |
 
 ```rust
 pub const CODE_OK: i32 = 0;
@@ -24,6 +25,7 @@ pub const CODE_REDIS_ERROR: i32 = 10001;
 pub const CODE_JSON_ERROR: i32 = 10002;
 pub const CODE_DB_ERROR: i32 = 10003;
 pub const CODE_NOT_FOUND: i32 = 10004;
+pub const CODE_AUTH_ERROR: i32 = 10005;
 ```
 
 业务模块可在此基础上定义自己的错误码（如 `1001`、`1002` 等），建议 `CODE_SERVER_ERROR` 保留给未知的服务器内部异常。
@@ -122,6 +124,7 @@ pub fn from_storage_error<T: Serialize>(e: StorageError) -> Json<ApiResponse<T>>
 | `Json(_)` | `CODE_JSON_ERROR` (10002) | JSON 序列化/反序列化失败 |
 | `Db(DbErr::RecordNotFound(_))` | `CODE_NOT_FOUND` (10004) | 请求的资源不存在 |
 | `Db(_)` | `CODE_DB_ERROR` (10003) | 其他数据库操作异常 |
+| `Authentication(_)` | `CODE_AUTH_ERROR` (10005) | 认证失败（凭据无效/token 错误） |
 
 消息内容直接使用错误的 `Display` 文本，便于调试。
 

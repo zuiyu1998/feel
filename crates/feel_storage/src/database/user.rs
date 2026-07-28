@@ -1,19 +1,20 @@
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{EncodingKey, Header};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 
 use crate::{Result, cache::user::UserCache, repo::UserRepo};
 use feel_entity::prelude::*;
 
-/// Claims stored in the JWT token for authenticated users
-#[derive(serde::Serialize, serde::Deserialize)]
-struct Claims {
+/// Claims stored in a JWT token for authenticated users.
+/// Returned by [`UserDataBase::parse_token`] for inspection/verification.
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct TokenClaims {
     /// Subject — user uid
-    sub: String,
+    pub sub: String,
     /// Issued at (UNIX timestamp)
-    iat: usize,
+    pub iat: usize,
     /// Expiration (UNIX timestamp)
-    exp: usize,
+    pub exp: usize,
 }
 
 pub struct CommonUserDataBase {
@@ -34,23 +35,6 @@ impl CommonUserDataBase {
             jwt_secret: jwt_secret.to_string(),
         }
     }
-
-    /// Generate a JWT token for the given user uid
-    fn generate_token(&self, uid: &str) -> Result<String> {
-        let now = Utc::now();
-        let claims = Claims {
-            sub: uid.to_string(),
-            iat: now.timestamp() as usize,
-            exp: (now + Duration::hours(24 * 7)).timestamp() as usize,
-        };
-
-        jsonwebtoken::encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(self.jwt_secret.as_bytes()),
-        )
-        .map_err(|e| crate::Error::Authentication(format!("Failed to generate token: {}", e)))
-    }
 }
 
 #[async_trait]
@@ -68,12 +52,47 @@ impl UserDataBase for CommonUserDataBase {
         let user_base = self.user_repo.login(login).await?;
 
         // 2. Generate JWT token with user uid as subject, 7-day expiry
-        let token = self.generate_token(&user_base.uid)?;
+        let token = UserDataBase::generate_token(self, &user_base.uid)?;
 
         // 3. Cache the authenticated user's data for fast subsequent access
         self.user_cache.set_user_base(&user_base).await?;
 
         Ok(LoginResult { token, user_base })
+    }
+
+    async fn get_user(&self, uid: &str) -> crate::Result<UserBase> {
+        // 1. Try cache first (keyed by numeric id — requires uid→id mapping, skip for now)
+        // 2. Fallback to repo lookup
+        self.user_repo
+            .find_by_uid(uid)
+            .await?
+            .ok_or_else(|| crate::Error::Authentication(format!("User {} not found", uid)))
+    }
+
+    fn generate_token(&self, uid: &str) -> crate::Result<String> {
+        let now = Utc::now();
+        let claims = TokenClaims {
+            sub: uid.to_string(),
+            iat: now.timestamp() as usize,
+            exp: (now + Duration::hours(24 * 7)).timestamp() as usize,
+        };
+
+        jsonwebtoken::encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(self.jwt_secret.as_bytes()),
+        )
+        .map_err(|e| crate::Error::Authentication(format!("Failed to generate token: {}", e)))
+    }
+
+    fn parse_token(&self, token: &str) -> crate::Result<TokenClaims> {
+        jsonwebtoken::decode::<TokenClaims>(
+            token,
+            &DecodingKey::from_secret(self.jwt_secret.as_bytes()),
+            &Validation::default(),
+        )
+        .map(|data| data.claims)
+        .map_err(|e| crate::Error::Authentication(format!("Failed to parse token: {}", e)))
     }
 
     fn logout(&self, _user_id: u32) -> crate::Result<()> {
@@ -97,4 +116,19 @@ pub trait UserDataBase: 'static + Send + Sync {
     fn logout(&self, user_id: u32) -> Result<()>;
     ///用户系统更改个人信息
     fn update(&self, update: &UserUpdate) -> Result<UserBase>;
+
+    // -- JWT token management --
+
+    /// Generate a JWT token for the given user uid.
+    /// The token embeds the uid, issue time, and a 7-day expiration.
+    fn generate_token(&self, uid: &str) -> Result<String>;
+
+    /// Parse and validate a JWT token, returning the embedded claims.
+    /// Returns `Authentication` error if the token is invalid or expired.
+    fn parse_token(&self, token: &str) -> Result<TokenClaims>;
+
+    // -- User query --
+
+    /// 根据用户 UID 获取用户基础信息
+    async fn get_user(&self, uid: &str) -> Result<UserBase>;
 }

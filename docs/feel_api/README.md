@@ -12,6 +12,7 @@
 cmd/feel_api/src/
 ├── main.rs      # 入口：启动 HTTP 服务器
 ├── lib.rs       # 路由、AppState、ApiConfig
+├── auth.rs      # JWT 认证中间件
 ├── model/       # API 专用 DTO（请求/响应数据模型）
 │   ├── mod.rs
 │   ├── user.rs      # 用户接口 DTO
@@ -37,10 +38,18 @@ DATABASE_URL=postgresql://user:password@host:5432/feel cargo run -p feel_api
 ```rust
 pub struct ApiConfig {
     pub database_url: String,
+    pub redis_url: String,
+    pub jwt_secret: String,
 }
 ```
 
-通过环境变量 `DATABASE_URL` 覆盖默认值，默认连接本地 PostgreSQL。
+通过环境变量覆盖默认值：
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `database_url` | `postgresql://postgres:bj123456@192.168.0.107:5432/feel` | PostgreSQL 连接 |
+| `redis_url` | `redis://192.168.0.107:6379` | Redis 连接 |
+| `jwt_secret` | `feel-jwt-secret` | JWT 签名密钥 |
 
 ## 应用状态（AppState）
 
@@ -50,21 +59,45 @@ pub struct AppState {
 }
 ```
 
-启动时初始化数据库连接池，创建 `UserDataBase` 实例注入到 Poem 的共享状态中，供各 handler 使用。
+启动时初始化数据库连接池和 Redis 连接，创建 `CommonUserDataBase` 实例（含 `UserRepo` + `UserCache` + `jwt_secret`）注入到 Poem 的共享状态中，供各 handler 使用。
+
+## 认证中间件（AuthMiddleware）
+
+`auth.rs` 提供 JWT Bearer token 认证中间件 `auth_middleware`，配合 Poem 的 `EndpointExt::around` 使用：
+
+```rust
+.at("/info", get(info).around(auth_middleware))
+```
+
+中间件流程：
+1. 从 `Authorization: Bearer <token>` 请求头提取 token
+2. 调用 `UserDataBase::parse_token` 验证签名和过期
+3. 将 `AuthUser { uid }` 注入请求扩展
+4. 调用内部 handler
+
+认证失败时返回 HTTP 401 + 统一 JSON 错误体：
+
+```json
+{
+    "code": 10005,
+    "message": "Missing or invalid Authorization header",
+    "data": null
+}
+```
 
 ## API 路由
 
 所有接口挂载在 `/api/v1` 前缀下：
 
-| 方法 | 路径                                | Handler       | 描述         | 状态 |
-|------|-------------------------------------|---------------|--------------|------|
-| POST | `/api/v1/user/register`             | `register`    | 注册用户     | ✅ 已实现 |
-| POST | `/api/v1/user/unregister/:user_id`  | `unregister`  | 注销用户     | ✅ 已实现 |
-| POST | `/api/v1/user/login`                | `login`       | 用户登录     | 🚧 占位 |
-| POST | `/api/v1/user/logout`               | `logout`      | 用户登出     | 🚧 占位 |
+| 方法 | 路径                                | Handler       | 描述             | 认证 | 状态 |
+|------|-------------------------------------|---------------|------------------|------|------|
+| POST | `/api/v1/user/register`             | `register`    | 注册用户         | ❌    | ✅ 已实现 |
+| POST | `/api/v1/user/unregister/:user_id`  | `unregister`  | 注销用户         | ❌    | ✅ 已实现 |
+| POST | `/api/v1/user/login`                | `login`       | 用户登录         | ❌    | ✅ 已实现 |
+| POST | `/api/v1/user/logout`               | `logout`      | 用户登出         | ❌    | 🚧 占位 |
+| GET  | `/api/v1/user/info`                 | `info`        | 获取当前用户信息 | ✅ Bearer | ✅ 已实现 |
 
-> `register` 和 `unregister` 已接入 `AppState` 和 `feel_storage`，包含错误处理。
-> `login` 和 `logout` 仍为占位实现。
+> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 需要通过 `Authorization: Bearer <token>` 认证。
 
 ## 架构说明
 

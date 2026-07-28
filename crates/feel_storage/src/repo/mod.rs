@@ -18,4 +18,6 @@ pub trait UserRepo: 'static + Send + Sync {
     fn update(&self, update: &UserUpdate) -> Result<UserBase>;
     ///根据凭据名称查找用户
     async fn find_by_credential_name(&self, credential_name: &str) -> Result<Option<UserBase>>;
+    ///根据用户 UID 查找用户
+    async fn find_by_uid(&self, uid: &str) -> Result<Option<UserBase>>;
 }

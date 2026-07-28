@@ -822,6 +822,7 @@ dependencies = [
  "redis",
  "sea-orm",
  "serde",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
 ]

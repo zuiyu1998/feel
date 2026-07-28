@@ -25,22 +25,20 @@ impl UserCache for CommonUserCache {
     async fn set_user_base(&self, user_base: &UserBase) -> Result<()> {
         let mut conn = self.get_connection().await?;
         let json = serde_json::to_string(user_base)?;
-        let user_id = user_base.id.to_string();
         redis::cmd("HSET")
             .arg(REDIS_KEY_USERS)
-            .arg(user_id)
+            .arg(&user_base.uid)
             .arg(json)
             .query_async::<_, ()>(&mut conn)
             .await?;
         Ok(())
     }
 
-    async fn get_user_base(&self, user_id: u32) -> Result<Option<UserBase>> {
+    async fn get_user_base(&self, user_id: &str) -> Result<Option<UserBase>> {
         let mut conn = self.get_connection().await?;
-        let user_id_str = user_id.to_string();
         let json: Option<String> = redis::cmd("HGET")
             .arg(REDIS_KEY_USERS)
-            .arg(user_id_str)
+            .arg(user_id)
             .query_async(&mut conn)
             .await?;
 
@@ -59,5 +57,5 @@ pub trait UserCache: 'static + Send + Sync {
     ///设置用户基础信息到缓存
     async fn set_user_base(&self, user_base: &UserBase) -> Result<()>;
     ///从缓存获取用户基础信息
-    async fn get_user_base(&self, user_id: u32) -> Result<Option<UserBase>>;
+    async fn get_user_base(&self, user_id: &str) -> Result<Option<UserBase>>;
 }

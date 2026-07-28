@@ -33,6 +33,19 @@ pub trait UserDataBase: 'static + Send + Sync {
 
     /// 用户系统更改个人信息
     fn update(&self, update: &UserUpdate) -> Result<UserBase>;
+
+    // -- JWT token management --
+
+    /// 为用户 uid 生成 JWT token，嵌入 7 天有效期
+    fn generate_token(&self, uid: &str) -> Result<String>;
+
+    /// 解析并验证 JWT token，返回其中的 claims
+    fn parse_token(&self, token: &str) -> Result<TokenClaims>;
+
+    // -- User query --
+
+    /// 根据用户 UID 获取用户基础信息
+    async fn get_user(&self, uid: &str) -> Result<UserBase>;
 }
 ```
 
@@ -47,15 +60,19 @@ pub trait UserDataBase: 'static + Send + Sync {
 
 ### 方法说明
 
-| 方法         | 参数                    | 返回                  | 说明                       |
-| ------------ | ----------------------- | --------------------- | -------------------------- |
-| `register`   | `&UserRegister`         | `Result<UserBase>`    | 注册新用户（**async**）    |
-| `unregister` | `user_id: i64`          | `Result<UserBase>`    | 注销指定用户               |
-| `login`      | `&UserLogin`            | `Result<LoginResult>` | 用户登录，返回 token+用户数据 |
-| `logout`     | `user_id: u32`          | `Result<()>`          | 用户登出                   |
-| `update`     | `&UserUpdate`           | `Result<UserBase>`    | 更新用户个人信息           |
+| 方法             | 参数                    | 返回                     | 说明                           |
+| ---------------- | ----------------------- | ------------------------ | ------------------------------ |
+| `register`       | `&UserRegister`         | `Result<UserBase>`       | 注册新用户（**async**）        |
+| `unregister`     | `user_id: i64`          | `Result<UserBase>`       | 注销指定用户                   |
+| `login`          | `&UserLogin`            | `Result<LoginResult>`    | 用户登录，返回 token+用户数据  |
+| `logout`         | `user_id: u32`          | `Result<()>`             | 用户登出                       |
+| `update`         | `&UserUpdate`           | `Result<UserBase>`       | 更新用户个人信息               |
+| `generate_token` | `uid: &str`             | `Result<String>`         | 为用户生成 JWT token           |
+| `parse_token`    | `token: &str`           | `Result<TokenClaims>`    | 解析并验证 JWT token           |
+| `get_user`       | `uid: &str`             | `Result<UserBase>`       | 根据 UID 获取用户信息（**async**） |
 
-> **注意：** 目前仅 `register` 方法有完整实现，其余方法尚为 `todo!()` 占位。
+> **注意：** `generate_token` 和 `parse_token` 由 `CommonUserDataBase` 直接实现（使用 JWT HMAC-SHA256），不委托给 `UserRepo`。`get_user` 委托给 `UserRepo::find_by_uid`。
+
 
 ---
 
@@ -88,6 +105,9 @@ impl CommonUserDataBase {
 | `login`           | `login`              | 直接委托          |
 | `update`          | `update`             | 直接委托          |
 | `logout`          | —                    | 无对应，待实现    |
+| `generate_token`  | —                    | 内部 JWT 签名实现 |
+| `parse_token`     | —                    | 内部 JWT 验证实现 |
+| `get_user`        | `find_by_uid`        | async 传递        |
 
 ---
 
@@ -185,6 +205,20 @@ pub struct LoginResult {
 pub struct UserUpdate {}     // 更新请求体（暂未定义字段）
 ```
 
+### TokenClaims
+
+JWT token 的 claims 结构体，由 `parse_token` 返回。
+
+```rust
+pub struct TokenClaims {
+    pub sub: String,  // 用户 uid
+    pub iat: usize,   // 签发时间（UNIX 时间戳）
+    pub exp: usize,   // 过期时间（UNIX 时间戳）
+}
+```
+
+`generate_token` 使用 HS256（HMAC-SHA256）算法签发 token，有效期为 7 天。`parse_token` 验证签名和过期时间，返回 token 中的 claims。
+
 ### UserCredential
 
 用户凭据实体，用于认证。
@@ -230,10 +264,13 @@ let user = user_db.register(&register).await.unwrap();
 
 ## 当前状态
 
-| 方法       | 实现状态 | 说明                                     |
-| ---------- | -------- | ---------------------------------------- |
-| register   | ✅ 完整   | async 实现，委托 UserRepo.register       |
-| unregister | ✅ 完整   | 委托 UserRepo.unregister，软删除           |
-| login      | ✅ 完整   | async 委托，返回 LoginResult，缓存 user_base |
-| logout     | 🚧 占位   | `todo!()`                                |
-| update     | 🚧 占位   | `todo!()`                                |
+| 方法             | 实现状态 | 说明                                       |
+| ---------------- | -------- | ------------------------------------------ |
+| register         | ✅ 完整   | async 实现，委托 UserRepo.register         |
+| unregister       | ✅ 完整   | 委托 UserRepo.unregister，软删除           |
+| login            | ✅ 完整   | async 委托 + 生成 token + 缓存 user_base   |
+| logout           | 🚧 占位   | `todo!()`                                  |
+| update           | 🚧 占位   | `todo!()`                                  |
+| **generate_token** | ✅ 完整 | JWT HS256 签名，7 天有效期                 |
+| **parse_token**    | ✅ 完整 | 验证签名 + 过期，返回 TokenClaims          |
+| **get_user**       | ✅ 完整 | async 委托 UserRepo::find_by_uid           |
