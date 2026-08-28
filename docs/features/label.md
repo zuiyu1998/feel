@@ -241,7 +241,7 @@ DELETE /api/user/{uid}/labels/{user_label_id}
 |----|------|-----------------|
 | `feel_entity::label` | 已有 `LabelBase`(含 `remark` 字段)与 `UserLabel` | — |
 | `feel_sea_orm` | 已有 `label`、`user_label` ORM 实体(含 `From<Model>` 转换) | — |
-| `feel_storage` | 暂无 label 存储实现 | 新增 `LabelRepo`(标签本体增查)+ `UserLabelRepo`(关联增删改查,按 `user_id` 过滤) |
+| `feel_storage` | 已有 `LabelRepo` + `SeaOrmLabelRepo`(统一操作 `LabelBase` 与 `UserLabel`,按 `user_id` 过滤) | — |
 | `feel_api` | 暂无 label 相关 handler | 新增标签增删改查接口,以及"查看标签下的用户"接口 |
 | `migration` | 已有 `label`、`user_label` 建表迁移 | — |
 

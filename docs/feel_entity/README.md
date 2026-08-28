@@ -260,7 +260,10 @@ pub struct UserCredential {
 ```
 feel_entity::label
   ├── LabelBase        — 标签本体（公有，多个用户共享）
-  └── UserLabel        — 用户标签关联（用户 × 标签，多对多）
+  ├── UserLabel        — 用户标签关联（用户 × 标签，多对多）
+  ├── LabelCreate      — 创建标签请求（`LabelRepo::create_label` 参数）
+  ├── LabelUpdate      — 更新标签请求（`LabelRepo::update_label` 参数）
+  └── UserLabelCreate  — 添加关联请求（`LabelRepo::create_user_label` 参数）
 ```
 
 ### LabelBase — 标签本体（公有）
@@ -345,6 +348,102 @@ pub struct UserLabel {
 }
 ```
 
+### LabelCreate
+
+创建标签本体的请求结构体，作为 `LabelRepo::create_label` 的参数。`id`、`enabled`（默认 `true`）与时间戳由存储层管理，调用方无需提供。
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LabelCreate {
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `name` | `String` | 标签名称（全局唯一标识） |
+| `description` | `String` | 公共描述 |
+| `remark` | `String` | 标签备注（所有用户共享） |
+| `influence` | `i64` | 标签影响力，创建时确立 |
+
+**JSON 示例：**
+
+```json
+{
+    "name": "Rust 开发者",
+    "description": "使用 Rust 进行开发的人",
+    "remark": "",
+    "influence": 50
+}
+```
+
+### LabelUpdate
+
+更新标签本体的请求结构体，作为 `LabelRepo::update_label` 的参数。携带主键 `id` 与全部可写字段（含 `enabled`，用于禁用/启用）。
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LabelUpdate {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+    pub enabled: bool,
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `i64` | 待更新标签本体的主键 |
+| `name` | `String` | 标签名称 |
+| `description` | `String` | 公共描述 |
+| `remark` | `String` | 标签备注 |
+| `influence` | `i64` | 标签影响力 |
+| `enabled` | `bool` | 是否启用 |
+
+**JSON 示例：**
+
+```json
+{
+    "id": 1,
+    "name": "Rust 开发者",
+    "description": "使用 Rust 进行开发的人",
+    "remark": "5 年 Rust 后端开发经验",
+    "influence": 100,
+    "enabled": true
+}
+```
+
+### UserLabelCreate
+
+创建用户标签关联的请求结构体，作为 `LabelRepo::create_user_label` 的参数。`id`、`enabled`（默认 `true`）与时间戳由存储层管理。
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserLabelCreate {
+    pub user_id: i64,
+    pub label_id: i64,
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `user_id` | `i64` | 归属用户，关联 `UserBase.id` |
+| `label_id` | `i64` | 关联的标签本体，关联 `LabelBase.id` |
+
+**JSON 示例：**
+
+```json
+{
+    "user_id": 1,
+    "label_id": 1
+}
+```
+
 ## 重新导出与 Prelude
 
 ### 导出路径
@@ -359,6 +458,9 @@ pub struct UserLabel {
 | `feel_entity::user::UserCredential` | struct |
 | `feel_entity::label::LabelBase` | struct |
 | `feel_entity::label::UserLabel` | struct |
+| `feel_entity::label::LabelCreate` | struct |
+| `feel_entity::label::LabelUpdate` | struct |
+| `feel_entity::label::UserLabelCreate` | struct |
 
 ### Prelude
 
@@ -376,7 +478,7 @@ pub mod prelude {
 use feel_entity::prelude::*;   // 导入所有实体（user + label）
 // 等价于：
 use feel_entity::user::{UserBase, UserRegister, UserLogin, LoginResult, UserUpdate, UserCredential};
-use feel_entity::label::{LabelBase, UserLabel};
+use feel_entity::label::{LabelBase, LabelCreate, LabelUpdate, UserLabel, UserLabelCreate};
 ```
 
 ## 类型关系图
@@ -444,6 +546,9 @@ LabelBase (1) ──────── (N) UserLabel (N) ───────�
 | `UserUpdate` | — | 占位 |
 | `LabelBase` | `feel_sea_orm::label::entities::label::Model` | `Model` 实现了 `From<Model> for LabelBase` |
 | `UserLabel` | `feel_sea_orm::label::entities::user_label::Model` | `Model` 实现了 `From<Model> for UserLabel` |
+| `LabelCreate` | — | 创建标签请求（`LabelRepo::create_label` 参数） |
+| `LabelUpdate` | — | 更新标签请求（`LabelRepo::update_label` 参数） |
+| `UserLabelCreate` | — | 添加关联请求（`LabelRepo::create_user_label` 参数） |
 
 领域层与 ORM 层的分离使得：
 - 数据库表结构变化不影响业务层（通过 `From` 转换隔离）
@@ -505,6 +610,28 @@ let user_label = UserLabel {
     enabled: true,
     created_at: Utc::now(),
     updated_at: Utc::now(),
+};
+
+// 创建/更新请求结构体(作为 LabelRepo 方法参数)
+let label_create = LabelCreate {
+    name: "Rust 开发者".into(),
+    description: "使用 Rust 进行开发的人".into(),
+    remark: String::new(),
+    influence: 50,
+};
+
+let label_update = LabelUpdate {
+    id: 1,
+    name: "Rust 开发者".into(),
+    description: "使用 Rust 进行开发的人".into(),
+    remark: "5 年 Rust 后端开发经验".into(),
+    influence: 100,
+    enabled: true,
+};
+
+let user_label_create = UserLabelCreate {
+    user_id: 1,
+    label_id: 1,
 };
 ```
 
