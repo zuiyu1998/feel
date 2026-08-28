@@ -11,10 +11,14 @@
 ```
 crates/feel_entity/src/
 ├── lib.rs               # 模块声明 + prelude
-└── user/
+├── user/
+│   ├── mod.rs            # models 子模块重新导出
+│   └── models/
+│       └── mod.rs        # 用户相关实体（UserBase 等）
+└── label/
     ├── mod.rs            # models 子模块重新导出
     └── models/
-        └── mod.rs        # 所有用户相关实体定义
+        └── mod.rs        # 标签实体（LabelBase、UserLabel）
 ```
 
 ## 依赖关系
@@ -247,6 +251,100 @@ pub struct UserCredential {
 }
 ```
 
+## 模块：`label`
+
+标签相关实体定义在 `feel_entity::label` 模块下，通过 `feel_entity::prelude` 也可访问。领域模型与特性设计文档 `docs/features/label.md` 保持一致。
+
+### 模块结构
+
+```
+feel_entity::label
+  ├── LabelBase        — 标签本体（公有，多个用户共享）
+  └── UserLabel        — 用户标签关联（用户 × 标签，多对多）
+```
+
+### LabelBase — 标签本体（公有）
+
+标签本体，是多个用户所公有的标签实体，用于刻画用户特征；名称全局唯一，备注对所有用户共享。
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct LabelBase {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `i64` | 数据库主键 |
+| `name` | `String` | 标签名称（全局唯一标识） |
+| `description` | `String` | 标签的公共描述，帮助所有人理解该标签的含义 |
+| `remark` | `String` | 标签备注，对标签含义的补充说明，所有用户共享 |
+| `influence` | `i64` | 标签影响力，在创建标签时确立，之后不再变更 |
+| `enabled` | `bool` | 是否启用 |
+| `created_at` | `DateTime<Utc>` | 记录创建时间 |
+| `updated_at` | `DateTime<Utc>` | 记录更新时间 |
+
+**JSON 示例：**
+
+```json
+{
+    "id": 1,
+    "name": "Rust 开发者",
+    "description": "使用 Rust 进行开发的人",
+    "remark": "5 年 Rust 后端开发经验",
+    "influence": 100,
+    "enabled": true,
+    "created_at": "2026-07-11T03:00:00Z",
+    "updated_at": "2026-07-11T03:00:00Z"
+}
+```
+
+### UserLabel — 用户标签关联
+
+用户与标签的**多对多**关联记录，仅承载"用户 × 标签"关系；备注等个性化内容位于 `LabelBase` 上，不在此处。
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserLabel {
+    pub id: i64,
+    pub user_id: i64,
+    pub label_id: i64,
+    pub enabled: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | `i64` | 数据库主键 |
+| `user_id` | `i64` | 归属用户标识，关联 `UserBase.id` |
+| `label_id` | `i64` | 关联的标签本体，关联 `LabelBase.id` |
+| `enabled` | `bool` | 是否启用 |
+| `created_at` | `DateTime<Utc>` | 记录创建时间 |
+| `updated_at` | `DateTime<Utc>` | 记录更新时间 |
+
+**JSON 示例：**
+
+```json
+{
+    "id": 10,
+    "user_id": 1,
+    "label_id": 1,
+    "enabled": true,
+    "created_at": "2026-07-11T03:00:00Z",
+    "updated_at": "2026-07-11T03:00:00Z"
+}
+```
+
 ## 重新导出与 Prelude
 
 ### 导出路径
@@ -259,12 +357,15 @@ pub struct UserCredential {
 | `feel_entity::user::LoginResult` | struct |
 | `feel_entity::user::UserUpdate` | struct |
 | `feel_entity::user::UserCredential` | struct |
+| `feel_entity::label::LabelBase` | struct |
+| `feel_entity::label::UserLabel` | struct |
 
 ### Prelude
 
 ```rust
 // src/lib.rs
 pub mod prelude {
+    pub use crate::label::*;
     pub use crate::user::*;
 }
 ```
@@ -272,9 +373,10 @@ pub mod prelude {
 使用方式：
 
 ```rust
-use feel_entity::prelude::*;   // 导入所有用户实体
+use feel_entity::prelude::*;   // 导入所有实体（user + label）
 // 等价于：
 use feel_entity::user::{UserBase, UserRegister, UserLogin, LoginResult, UserUpdate, UserCredential};
+use feel_entity::label::{LabelBase, UserLabel};
 ```
 
 ## 类型关系图
@@ -310,6 +412,24 @@ UserLogin ──────────────► 验证 → LoginResult
 UserUpdate (空占位)
 ```
 
+### 标签关系
+
+标签与用户为**多对多（M:N）** 关系，通过 `UserLabel` 关联表承载：
+
+```
+LabelBase (1) ──────── (N) UserLabel (N) ──────── (1) UserBase
+  id                            user_id                    id
+                                label_id
+
+一个用户 ──拥有──► 多个标签（UserLabel）
+一个标签 ──对应──► 多个用户（UserLabel）
+```
+
+- **正向（用户 → 标签）**：一个用户可以关联多个标签，这些关联构成其自我画像
+- **反向（标签 → 用户）**：一个标签可以被多个用户关联，按标签即可找到使用它的用户群
+- 标签本体是公有的，不属于任何单个用户
+- 备注挂在标签本体上：所有用户看到同一份标签备注
+
 ## 与 ORM 实体的关系
 
 `feel_entity` 中的类型是**纯领域模型**，与 `feel_sea_orm` 中的 ORM 实体（Sea-ORM `DeriveEntityModel`）分开定义：
@@ -322,6 +442,8 @@ UserUpdate (空占位)
 | `UserLogin` | — | 纯业务请求 |
 | `LoginResult` | — | 业务返回结果 |
 | `UserUpdate` | — | 占位 |
+| `LabelBase` | — | 标签本体，暂无可用的 ORM 实体 |
+| `UserLabel` | — | 用户-标签关联，暂无可用的 ORM 实体 |
 
 领域层与 ORM 层的分离使得：
 - 数据库表结构变化不影响业务层（通过 `From` 转换隔离）
@@ -361,6 +483,28 @@ let result = LoginResult {
         created_at: Utc::now(),
         updated_at: Utc::now(),
     },
+};
+
+// 标签本体
+let label = LabelBase {
+    id: 1,
+    name: "Rust 开发者".into(),
+    description: "使用 Rust 进行开发的人".into(),
+    remark: "5 年 Rust 后端开发经验".into(),
+    influence: 100,
+    enabled: true,
+    created_at: Utc::now(),
+    updated_at: Utc::now(),
+};
+
+// 用户标签关联
+let user_label = UserLabel {
+    id: 10,
+    user_id: 1,
+    label_id: 1,
+    enabled: true,
+    created_at: Utc::now(),
+    updated_at: Utc::now(),
 };
 ```
 
