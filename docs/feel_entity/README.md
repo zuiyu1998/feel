@@ -442,8 +442,8 @@ LabelBase (1) ──────── (N) UserLabel (N) ───────�
 | `UserLogin` | — | 纯业务请求 |
 | `LoginResult` | — | 业务返回结果 |
 | `UserUpdate` | — | 占位 |
-| `LabelBase` | — | 标签本体，暂无可用的 ORM 实体 |
-| `UserLabel` | — | 用户-标签关联，暂无可用的 ORM 实体 |
+| `LabelBase` | `feel_sea_orm::label::entities::label::Model` | `Model` 实现了 `From<Model> for LabelBase` |
+| `UserLabel` | `feel_sea_orm::label::entities::user_label::Model` | `Model` 实现了 `From<Model> for UserLabel` |
 
 领域层与 ORM 层的分离使得：
 - 数据库表结构变化不影响业务层（通过 `From` 转换隔离）
