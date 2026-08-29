@@ -32,6 +32,9 @@ pub trait UserRepo: 'static + Send + Sync {
 
     /// 根据凭据名称查找用户
     async fn find_by_credential_name(&self, credential_name: &str) -> Result<Option<UserBase>>;
+
+    /// 根据用户 ID 查找用户
+    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserBase>>;
 }
 ```
 
@@ -52,6 +55,7 @@ pub trait UserRepo: 'static + Send + Sync {
 | `login`      | `&UserLogin`            | `Result<LoginResult>` | 用户登录，返回 token+用户  |
 | `update`     | `&UserUpdate`           | `Result<UserBase>`    | 更新用户个人信息           |
 | `find_by_credential_name` | `credential_name: &str` | `Result<Option<UserBase>>` | 凭据名查用户（**async**） |
+| `find_by_id` | `user_id: i64` | `Result<Option<UserBase>>` | 按主键查用户（**async**） |
 
 > **注意：** `UserRepo` 不包含 `logout` 方法——登出属于会话层逻辑，不在持久化层处理。
 
@@ -238,3 +242,4 @@ let user = repo.register(&register).await.unwrap();
 | login      | 🚧 占位   | `todo!()`                                      |
 | update     | 🚧 占位   | `todo!()`                                      |
 | `find_by_credential_name` | ✅ 完整   | 凭据名 → user_uid → 用户数据查找               |
+| `find_by_id` | ✅ 完整   | 按主键查找用户，供标签接口按 user_id 组装用户信息 |

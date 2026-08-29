@@ -32,7 +32,7 @@ RUST_LOG=debug cargo run -p feel_api
 ### 2. 验证服务
 
 ```bash
-curl -X POST http://localhost:3000/api/v1/user/register
+curl -X POST http://localhost:3000/api/v1/users/register
 ```
 
 ## 代码入口

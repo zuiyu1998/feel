@@ -173,6 +173,16 @@ async fn get_user(&self, uid: &str) -> Result<UserBase> {
 
 委托 `UserRepo::find_by_uid` 按 uid 查找用户，将 `None` 转换为 `Error::Authentication`。暂未集成缓存——因缓存键为数值型 `user_id`，而查询键为字符串 `uid`，后续可通过缓存 uid→id 映射来优化。
 
+### get_user_by_id
+
+```rust
+async fn get_user_by_id(&self, user_id: i64) -> Result<Option<UserBase>> {
+    self.user_repo.find_by_id(user_id).await
+}
+```
+
+委托 `UserRepo::find_by_id` 按主键查找用户，未找到时返回 `None`（不转换为错误）。供标签接口"查看标签下的用户"按 `user_id` 组装用户信息。
+
 ### 委托总览
 
 | UserDataBase 方法 | 委托目标                  | 实现状态 |
@@ -185,6 +195,7 @@ async fn get_user(&self, uid: &str) -> Result<UserBase> {
 | `generate_token`  | —（JWT HMAC-SHA256 自实现）| ✅ 完整 |
 | `parse_token`     | —（JWT 验证自实现）       | ✅ 完整 |
 | `get_user`        | `UserRepo::find_by_uid`   | ✅ 完整 |
+| `get_user_by_id`  | `UserRepo::find_by_id`    | ✅ 完整 |
 
 ---
 
@@ -321,3 +332,4 @@ let user_db = CommonUserDataBase::new(repo, cache, "test-secret");
 | **generate_token** | ✅ 完整 | JWT HS256 签名，7 天有效期，使用 `jwt_secret` 密钥             |
 | **parse_token**    | ✅ 完整 | 验证 HMAC 签名 + 过期时间，返回 `TokenClaims`                  |
 | **get_user**       | ✅ 完整 | async 委托至 `UserRepo::find_by_uid`，None→Authentication 错误 |
+| **get_user_by_id** | ✅ 完整 | async 委托至 `UserRepo::find_by_id`，None 原样返回           |

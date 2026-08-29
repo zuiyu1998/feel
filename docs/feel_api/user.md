@@ -4,11 +4,11 @@
 
 用户相关 HTTP 接口定义在 `cmd/feel_api/src/user/mod.rs` 中，通过 Poem 框架提供 RESTful 服务。
 
-所有接口均对外暴露为 `POST` 方法，挂载在 `/api/v1/user/` 路径下。
+所有接口均对外暴露为 `POST` 方法，挂载在 `/api/v1/users/` 路径下。
 
 ---
 
-## POST `/api/v1/user/register` — 注册用户
+## POST `/api/v1/users/register` — 注册用户
 
 ### 当前状态
 
@@ -56,7 +56,7 @@ async fn register(
 完整的 register handler 应实现以下流程：
 
 ```
-HTTP POST /api/v1/user/register  (Json<RegisterRequest>)
+HTTP POST /api/v1/users/register  (Json<RegisterRequest>)
   → register handler
     → 校验请求参数
     → 将 RegisterRequest 转换为 UserRegister（领域模型）
@@ -281,11 +281,11 @@ impl From<Model> for UserBase {
 
 ---
 
-## POST `/api/v1/user/unregister` — 注销用户
+## POST `/api/v1/users/unregister` — 注销用户
 
 ### 当前状态
 
-**Handler 已完整实现**，使用路径参数方案（`/api/v1/user/unregister/:user_id`）。
+**Handler 已完整实现**，使用路径参数方案（`/api/v1/users/unregister/:user_id`）。
 
 ```rust
 #[handler]
@@ -320,7 +320,7 @@ async fn unregister(
 完整的 unregister handler 应实现以下流程：
 
 ```
-HTTP POST /api/v1/user/unregister/:user_id
+HTTP POST /api/v1/users/unregister/:user_id
   → unregister handler
     → 从路径提取 user_id
     → AppState.user_database.unregister(user_id)    [UserDataBase trait]
@@ -337,7 +337,7 @@ HTTP POST /api/v1/user/unregister/:user_id
 
 ### 请求参数
 
-`/api/v1/user/unregister/:user_id` 使用路径参数，在 Poem 中通过 `Path<i64>` 提取：
+`/api/v1/users/unregister/:user_id` 使用路径参数，在 Poem 中通过 `Path<i64>` 提取：
 
 ```rust
 .at("/unregister/:user_id", post(unregister))
@@ -442,7 +442,7 @@ Ok(updated_user.into())
 
 ---
 
-## POST `/api/v1/user/login` — 用户登录
+## POST `/api/v1/users/login` — 用户登录
 
 ### 当前状态
 
@@ -478,7 +478,7 @@ async fn login(
 ### 接口流程
 
 ```
-HTTP POST /api/v1/user/login  (Json<LoginRequest>)
+HTTP POST /api/v1/users/login  (Json<LoginRequest>)
   → login handler
     → 将 LoginRequest 转换为 UserLogin（领域模型）
     → AppState.user_database.login(&user_login)          [UserDataBase trait]
@@ -660,7 +660,7 @@ Token 由 `CommonUserDataBase::generate_token()` 生成，详情如下：
 
 ---
 
-## POST `/api/v1/user/logout` — 用户登出
+## POST `/api/v1/users/logout` — 用户登出
 
 ### 当前状态
 
@@ -679,7 +679,7 @@ fn logout(&self, user_id: u32) -> Result<()>;
 
 ---
 
-## GET `/api/v1/user/info` — 获取当前用户信息
+## GET `/api/v1/users/info` — 获取当前用户信息
 
 ### 当前状态
 
@@ -726,7 +726,7 @@ async fn info(
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1...
 ```
 
-token 由 `POST /api/v1/user/login` 接口签发。认证由 `auth_middleware` 中间件统一处理：
+token 由 `POST /api/v1/users/login` 接口签发。认证由 `auth_middleware` 中间件统一处理：
 
 1. 提取 `Authorization: Bearer <token>`
 2. 调用 `UserDataBase::parse_token` 验证签名和过期
@@ -738,7 +738,7 @@ token 由 `POST /api/v1/user/login` 接口签发。认证由 `auth_middleware` �
 ### 接口流程
 
 ```
-HTTP GET /api/v1/user/info (Authorization: Bearer <token>)
+HTTP GET /api/v1/users/info (Authorization: Bearer <token>)
   → auth_middleware (JWT 验证)
   → info handler
     → 从 req.extensions 获取 AuthUser.uid
@@ -850,11 +850,11 @@ pub fn router() -> Route {
 ```rust
 // cmd/feel_api/src/lib.rs
 pub fn app_route() -> Route {
-    Route::new().nest("/user", user::router())
+    Route::new().nest("/users", user::router())
 }
 ```
 
-最终完整路径为 `/api/v1/user/{action}`。
+最终完整路径为 `/api/v1/users/{action}`。
 
 ### 认证路由说明
 

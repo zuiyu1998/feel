@@ -22,6 +22,8 @@ pub trait UserRepo: 'static + Send + Sync {
     async fn find_by_credential_name(&self, credential_name: &str) -> Result<Option<UserBase>>;
     ///根据用户 UID 查找用户
     async fn find_by_uid(&self, uid: &str) -> Result<Option<UserBase>>;
+    ///根据用户 ID 查找用户
+    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserBase>>;
 }
 
 #[async_trait]

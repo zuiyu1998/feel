@@ -69,6 +69,10 @@ impl UserDataBase for CommonUserDataBase {
             .ok_or_else(|| crate::Error::Authentication(format!("User {} not found", uid)))
     }
 
+    async fn get_user_by_id(&self, user_id: i64) -> crate::Result<Option<UserBase>> {
+        self.user_repo.find_by_id(user_id).await
+    }
+
     fn generate_token(&self, uid: &str) -> crate::Result<String> {
         let now = Utc::now();
         let claims = TokenClaims {
@@ -131,4 +135,7 @@ pub trait UserDataBase: 'static + Send + Sync {
 
     /// 根据用户 UID 获取用户基础信息
     async fn get_user(&self, uid: &str) -> Result<UserBase>;
+
+    /// 根据用户 ID 获取用户基础信息
+    async fn get_user_by_id(&self, user_id: i64) -> Result<Option<UserBase>>;
 }

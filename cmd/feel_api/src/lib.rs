@@ -1,11 +1,12 @@
 pub mod auth;
+pub mod label;
 pub mod model;
 pub mod user;
 
 use feel_storage::{
     cache::user::CommonUserCache,
-    database::{CommonUserDataBase, UserDataBase},
-    repo::SeaOrmUserRepo,
+    database::{CommonLabelDataBase, CommonUserDataBase, LabelDataBase, UserDataBase},
+    repo::{SeaOrmLabelRepo, SeaOrmUserRepo},
 };
 use migration::MigratorTrait;
 use poem::Route;
@@ -31,6 +32,7 @@ impl Default for ApiConfig {
 #[derive(Clone)]
 pub struct AppState {
     pub user_database: Arc<dyn UserDataBase>,
+    pub label_database: Arc<dyn LabelDataBase>,
 }
 
 pub async fn init_app_state(config: &ApiConfig) -> AppState {
@@ -43,21 +45,30 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
         .await
         .expect("Database migration failed.");
 
-    let user_repo = SeaOrmUserRepo::new(conn);
+    // 存储层:user 与 label 共享同一数据库连接
+    let user_repo = SeaOrmUserRepo::new(conn.clone());
+    let label_repo = SeaOrmLabelRepo::new(conn);
 
     let redis_client =
         redis::Client::open(&*config.redis_url).expect("Redis client create failed.");
     let user_cache = Box::new(CommonUserCache::new(redis_client));
 
+    // 数据访问层
     let user_database = Arc::new(CommonUserDataBase::new(
         user_repo,
         user_cache,
         &config.jwt_secret,
     ));
+    let label_database = Arc::new(CommonLabelDataBase::new(label_repo));
 
-    AppState { user_database }
+    AppState {
+        user_database,
+        label_database,
+    }
 }
 
 pub fn app_route() -> Route {
-    Route::new().nest("/user", user::router())
+    Route::new()
+        .nest("/users", user::router())
+        .nest("/labels", label::router())
 }

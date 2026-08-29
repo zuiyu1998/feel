@@ -19,6 +19,7 @@ cmd/feel_api/src/
 │   └── response.rs  # 通用响应封装 ApiResponse<T>
 └── user/
     └── mod.rs   # 用户相关接口
+    （label/ 与 model/label.rs 为规划中,见 label.md）
 ```
 
 ## 运行方式
@@ -91,13 +92,18 @@ pub struct AppState {
 
 | 方法 | 路径                                | Handler       | 描述             | 认证 | 状态 |
 |------|-------------------------------------|---------------|------------------|------|------|
-| POST | `/api/v1/user/register`             | `register`    | 注册用户         | ❌    | ✅ 已实现 |
-| POST | `/api/v1/user/unregister/:user_id`  | `unregister`  | 注销用户         | ❌    | ✅ 已实现 |
-| POST | `/api/v1/user/login`                | `login`       | 用户登录         | ❌    | ✅ 已实现 |
-| POST | `/api/v1/user/logout`               | `logout`      | 用户登出         | ❌    | 🚧 占位 |
-| GET  | `/api/v1/user/info`                 | `info`        | 获取当前用户信息 | ✅ Bearer | ✅ 已实现 |
+| POST | `/api/v1/users/register`             | `register`    | 注册用户         | ❌    | ✅ 已实现 |
+| POST | `/api/v1/users/unregister/:user_id`  | `unregister`  | 注销用户         | ❌    | ✅ 已实现 |
+| POST | `/api/v1/users/login`                | `login`       | 用户登录         | ❌    | ✅ 已实现 |
+| POST | `/api/v1/users/logout`               | `logout`      | 用户登出         | ❌    | 🚧 占位 |
+| GET  | `/api/v1/users/info`                 | `info`        | 获取当前用户信息 | ✅ Bearer | ✅ 已实现 |
+| GET  | `/api/v1/labels/list`               | `list_user_labels` | 查看用户标签 | ❌ | ✅ 已实现 |
+| GET  | `/api/v1/labels/users`               | `list_label_users` | 查看标签下的用户 | ❌ | ✅ 已实现 |
+| POST | `/api/v1/labels/add`                 | `add_label`   | 为用户添加标签   | ✅ Bearer | ✅ 已实现 |
+| PUT  | `/api/v1/labels/update`              | `update_label`| 修改标签备注     | ✅ Bearer | ✅ 已实现 |
+| DELETE | `/api/v1/labels/remove`            | `remove_label` | 解除关联 | ✅ Bearer | ✅ 已实现 |
 
-> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 需要通过 `Authorization: Bearer <token>` 认证。
+> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 需要通过 `Authorization: Bearer <token>` 认证。标签相关接口已实现，见 [label.md](label.md)。
 
 ## 架构说明
 

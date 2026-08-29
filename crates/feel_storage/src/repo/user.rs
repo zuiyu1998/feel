@@ -130,4 +130,9 @@ impl UserRepo for SeaOrmUserRepo {
             .await?;
         Ok(user.map(|u| u.into()))
     }
+
+    async fn find_by_id(&self, user_id: i64) -> Result<Option<UserBase>> {
+        let user = UserEntity::find_by_id(user_id).one(&self.conn).await?;
+        Ok(user.map(|u| u.into()))
+    }
 }

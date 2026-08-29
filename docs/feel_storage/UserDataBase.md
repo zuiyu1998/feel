@@ -46,6 +46,9 @@ pub trait UserDataBase: 'static + Send + Sync {
 
     /// 根据用户 UID 获取用户基础信息
     async fn get_user(&self, uid: &str) -> Result<UserBase>;
+
+    /// 根据用户 ID 获取用户基础信息
+    async fn get_user_by_id(&self, user_id: i64) -> Result<Option<UserBase>>;
 }
 ```
 
@@ -70,8 +73,9 @@ pub trait UserDataBase: 'static + Send + Sync {
 | `generate_token` | `uid: &str`             | `Result<String>`         | 为用户生成 JWT token           |
 | `parse_token`    | `token: &str`           | `Result<TokenClaims>`    | 解析并验证 JWT token           |
 | `get_user`       | `uid: &str`             | `Result<UserBase>`       | 根据 UID 获取用户信息（**async**） |
+| `get_user_by_id` | `user_id: i64`          | `Result<Option<UserBase>>` | 根据 ID 获取用户信息（**async**） |
 
-> **注意：** `generate_token` 和 `parse_token` 由 `CommonUserDataBase` 直接实现（使用 JWT HMAC-SHA256），不委托给 `UserRepo`。`get_user` 委托给 `UserRepo::find_by_uid`。
+> **注意：** `generate_token` 和 `parse_token` 由 `CommonUserDataBase` 直接实现（使用 JWT HMAC-SHA256），不委托给 `UserRepo`。`get_user` 委托给 `UserRepo::find_by_uid`，`get_user_by_id` 委托给 `UserRepo::find_by_id`。
 
 
 ---
@@ -108,6 +112,7 @@ impl CommonUserDataBase {
 | `generate_token`  | —                    | 内部 JWT 签名实现 |
 | `parse_token`     | —                    | 内部 JWT 验证实现 |
 | `get_user`        | `find_by_uid`        | async 传递        |
+| `get_user_by_id`  | `find_by_id`         | async 传递        |
 
 ---
 
@@ -274,3 +279,4 @@ let user = user_db.register(&register).await.unwrap();
 | **generate_token** | ✅ 完整 | JWT HS256 签名，7 天有效期                 |
 | **parse_token**    | ✅ 完整 | 验证签名 + 过期，返回 TokenClaims          |
 | **get_user**       | ✅ 完整 | async 委托 UserRepo::find_by_uid           |
+| **get_user_by_id** | ✅ 完整 | async 委托 UserRepo::find_by_id             |
