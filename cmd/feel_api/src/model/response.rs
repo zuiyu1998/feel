@@ -13,6 +13,7 @@
 //! | [`CODE_REDIS_ERROR`] | 10001 | Redis 操作异常 |
 //! | [`CODE_JSON_ERROR`] | 10002 | JSON 序列化/反序列化错误 |
 //! | [`CODE_AUTH_ERROR`] | 10005 | 认证失败（凭据无效/token 错误） |
+//! | [`CODE_BUSINESS_ERROR`] | 10006 | 业务规则校验失败（如标签数量超限） |
 
 use feel_storage::error::Error as StorageError;
 use poem::web::Json;
@@ -38,6 +39,9 @@ pub const CODE_JSON_ERROR: i32 = 10002;
 
 /// 认证失败（凭据无效/token 错误）。
 pub const CODE_AUTH_ERROR: i32 = 10005;
+
+/// 业务规则校验失败（如标签数量超限）。
+pub const CODE_BUSINESS_ERROR: i32 = 10006;
 
 /// 泛型 API 响应结构体。
 ///
@@ -85,6 +89,8 @@ pub fn err<T: Serialize>(code: i32, message: impl Into<String>) -> Json<ApiRespo
 /// - `Json` → [`CODE_JSON_ERROR`] (10002)
 /// - `Db(DbErr::RecordNotFound)` → [`CODE_NOT_FOUND`] (10004)
 /// - `Db(_)` → [`CODE_DB_ERROR`] (10003)
+/// - `Authentication` → [`CODE_AUTH_ERROR`] (10005)
+/// - `Business` → [`CODE_BUSINESS_ERROR`] (10006)
 ///
 /// 消息内容直接使用错误的 display 文本。
 ///
@@ -110,6 +116,7 @@ pub fn from_storage_error<T: Serialize>(e: StorageError) -> Json<ApiResponse<T>>
             _ => CODE_DB_ERROR,
         },
         StorageError::Authentication(_) => CODE_AUTH_ERROR,
+        StorageError::Business(_) => CODE_BUSINESS_ERROR,
     };
     err(code, e.to_string())
 }

@@ -248,6 +248,20 @@ repo.delete_user_label(user_label.id).await.unwrap();
 
 ---
 
+## 与 LabelDataBase 的对比
+
+| 维度 | LabelDataBase | LabelRepo |
+| --- | --- | --- |
+| 所属模块 | `database::label` | `repo::label` |
+| 职责 | 数据访问接口（业务层使用） | 持久化实现接口（存储层） |
+| 方法 | create_label / update_label / get_label / get_label_by_name / get_user_labels / get_users_by_label / count_user_labels / add_label / remove_label | find_* / create_* / update_* / delete_* |
+| 数量上限 | `add_label` 内置 20 个上限校验 | 不校验，由上层负责 |
+| 实现方式 | 委托 LabelRepo | 直接操作 Sea-ORM |
+
+设计见 [`LabelDataBase.md`](LabelDataBase.md)。
+
+---
+
 ## 当前状态
 
 | 方法 | 实现状态 | 说明 |

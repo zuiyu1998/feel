@@ -8,6 +8,8 @@ pub enum Error {
     Json(#[from] serde_json::Error),
     #[error("Database error: {0}")]
     Db(#[from] sea_orm::DbErr),
+    #[error("Business error: {0}")]
+    Business(String),
     #[error("Authentication error: {0}")]
     Authentication(String),
 }
