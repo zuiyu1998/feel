@@ -51,15 +51,21 @@ impl MigrationTrait for Migration {
                     .unique()
                     .to_owned(),
             )
-            .index(
-                &mut Index::create()
+            .to_owned();
+
+        manager.create_table(table).await?;
+
+        // 非唯一索引不能作为表内约束(CONSTRAINT 必须指定类型,如 UNIQUE),
+        // 需在建表后单独创建 CREATE INDEX
+        manager
+            .create_index(
+                Index::create()
                     .name("idx_user_label_label_id")
+                    .table(UserLabel)
                     .col(UserLabelColumn::LabelId)
                     .to_owned(),
             )
-            .to_owned();
-
-        manager.create_table(table).await
+            .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
