@@ -97,6 +97,7 @@ pub struct AppState {
 | POST | `/api/v1/users/login`                | `login`       | 用户登录         | ❌    | ✅ 已实现 |
 | POST | `/api/v1/users/logout`               | `logout`      | 用户登出         | ❌    | 🚧 占位 |
 | GET  | `/api/v1/users/info`                 | `info`        | 获取当前用户信息 | ✅ Bearer | ✅ 已实现 |
+| POST | `/api/v1/labels/create`             | `create_label` | 创建标签本体   | ✅ Bearer | ✅ 已实现 |
 | GET  | `/api/v1/labels/list`               | `list_user_labels` | 查看用户标签 | ❌ | ✅ 已实现 |
 | GET  | `/api/v1/labels/users`               | `list_label_users` | 查看标签下的用户 | ❌ | ✅ 已实现 |
 | POST | `/api/v1/labels/add`                 | `add_label`   | 为用户添加标签   | ✅ Bearer | ✅ 已实现 |

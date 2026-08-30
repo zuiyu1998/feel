@@ -17,17 +17,126 @@
 - 数据访问层：`feel_storage::database::LabelDataBase` / `CommonLabelDataBase`（已实现，含数量上限校验）
 - 持久化层：`feel_storage::repo::LabelRepo` / `SeaOrmLabelRepo`（已实现）
 
-> **参数传递：** label 接口不使用 URL 路径（`Path`）与查询串（`Query`），所有参数均通过 `Json` 请求体传递；`user_id`/`label_id` 使用 `i64` 数据库主键（`docs/features/label.md` 核心交互中的 `{uid}` 为旧表述）。各操作使用独立子路径区分（`list` / `users` / `add` / `update` / `remove`）。
+> **参数传递：** label 接口不使用 URL 路径（`Path`）与查询串（`Query`），所有参数均通过 `Json` 请求体传递；`user_id`/`label_id` 使用 `i64` 数据库主键（`docs/features/label.md` 核心交互中的 `{uid}` 为旧表述）。各操作使用独立子路径区分（`create` / `list` / `users` / `add` / `update` / `remove`）。
 
 ## 接口一览
 
 | 方法 | 路径 | Handler | 描述 | 请求体 | 认证 |
 | --- | --- | --- | --- | --- | --- |
+| POST | `/api/v1/labels/create` | `create_label` | 创建标签本体 | `CreateLabelRequest` | ✅ Bearer |
 | GET | `/api/v1/labels/list` | `list_user_labels` | 查看用户标签 | `ListUserLabelsRequest` | ❌ 公开 |
 | GET | `/api/v1/labels/users` | `list_label_users` | 查看标签下的用户 | `ListLabelUsersRequest` | ❌ 公开 |
 | POST | `/api/v1/labels/add` | `add_label` | 为用户添加标签 | `AddLabelRequest` | ✅ Bearer |
 | PUT | `/api/v1/labels/update` | `update_label` | 修改标签备注 | `UpdateLabelRequest` | ✅ Bearer |
 | DELETE | `/api/v1/labels/remove` | `remove_label` | 解除关联 | `RemoveLabelRequest` | ✅ Bearer |
+
+---
+
+## POST `/api/v1/labels/create` — 创建标签本体
+
+### 当前状态
+
+✅ 已实现。
+
+### 设计意图
+
+创建标签本体（`LabelBase`）。名称全局唯一，重复创建由唯一约束拒绝；`id`、`enabled`（默认 `true`）、时间戳由存储层管理。创建后的标签本体可供任意用户关联使用。
+
+```
+HTTP POST /api/v1/labels/create  (Authorization: Bearer <token>; Json<CreateLabelRequest>)
+  → auth_middleware (JWT 验证)
+  → create_label handler
+    → CreateLabelRequest → LabelCreate（领域模型）
+    → AppState.label_database.create_label(&LabelCreate)   [LabelDataBase]
+      → CommonLabelDataBase.create_label()
+        → SeaOrmLabelRepo.create_label()                  [LabelRepo — 写入 label 表]
+    → LabelBase → LabelResponse（API DTO）
+    → 用 ok() 包装为 ApiResponse<LabelResponse> 返回
+```
+
+### 请求类型 — `Json<CreateLabelRequest>`
+
+定义在 `cmd/feel_api/src/model/label.rs`。
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct CreateLabelRequest {
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+}
+```
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `name` | `String` | 标签名称（全局唯一，必填） |
+| `description` | `String` | 公共描述 |
+| `remark` | `String` | 标签备注（所有用户共享） |
+| `influence` | `i64` | 标签影响力，创建时确立 |
+
+**JSON 示例：**
+
+```json
+{
+    "name": "Rust 开发者",
+    "description": "使用 Rust 进行开发的人",
+    "remark": "",
+    "influence": 50
+}
+```
+
+### 响应类型 — `ApiResponse<LabelResponse>`
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct LabelResponse {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+    pub enabled: bool,
+    pub created_at: String,   // ISO 8601 字符串
+    pub updated_at: String,   // ISO 8601 字符串
+}
+```
+
+**JSON 示例：**
+
+```json
+{
+    "code": 0,
+    "message": "ok",
+    "data": {
+        "id": 1,
+        "name": "Rust 开发者",
+        "description": "使用 Rust 进行开发的人",
+        "remark": "",
+        "influence": 50,
+        "enabled": true,
+        "created_at": "2026-07-11T03:00:00Z",
+        "updated_at": "2026-07-11T03:00:00Z"
+    }
+}
+```
+
+### 错误码映射
+
+| 错误类型 | 业务码 | 说明 |
+| --- | --- | --- |
+| `StorageError::Db(_)` | `10003` | 数据库异常（含名称唯一约束冲突） |
+| `StorageError::Authentication(_)` | `10005` | token 缺失或无效 |
+
+### 下层调用链
+
+```
+create_label handler (已实现)
+  ↓ LabelDataBase::create_label(&LabelCreate)
+CommonLabelDataBase
+  ↓ 委托
+SeaOrmLabelRepo::create_label()
+```
 
 ---
 
@@ -242,28 +351,7 @@ pub struct AddLabelRequest {
 }
 ```
 
-若标签不存在，也可按名称创建本体后再关联（可选流程，对应 `LabelDataBase::create_label`）：
-
-```rust
-#[derive(Debug, Deserialize)]
-pub struct CreateLabelRequest {
-    pub name: String,
-    pub description: String,
-    pub remark: String,
-    pub influence: i64,
-}
-```
-
-**JSON 示例：**
-
-```json
-{
-    "name": "马拉松爱好者",
-    "description": "",
-    "influence": 50,
-    "remark": ""
-}
-```
+> 若标签本体不存在，可先调用 `POST /api/v1/labels/create` 创建标签本体，再添加关联。
 
 ### 响应类型 — `ApiResponse<UserLabelResponse>`
 
@@ -519,7 +607,7 @@ pub fn app_route() -> Route {
 ### 认证路由说明
 
 - 读取接口（查看用户标签、查看标签下的用户）公开，无需认证
-- 写操作（添加标签、修改备注、解除关联）使用 `.around(auth_middleware)` 保护
+- 写操作（创建标签本体、添加标签、修改备注、解除关联）使用 `.around(auth_middleware)` 保护
 - 按业务规则"用户只能管理自己的关联"，handler 需校验请求体 `user_id` 与 `AuthUser` 对应（或具备标签维护权限）
 
 ---
@@ -540,6 +628,7 @@ pub fn app_route() -> Route {
 
 | `docs/features/label.md` 核心交互 | 本接口 |
 | --- | --- |
+| 创建标签本体（添加标签中的"按名称创建本体"部分） | `POST /api/v1/labels/create` |
 | 查看用户标签 | `GET /api/v1/labels/list`（body: `user_id`） |
 | 查看标签下的用户 | `GET /api/v1/labels/users`（body: `label_id`） |
 | 添加标签 | `POST /api/v1/labels/add` |

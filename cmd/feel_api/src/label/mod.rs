@@ -6,24 +6,52 @@
 use crate::AppState;
 use crate::auth::{AuthUser, auth_middleware};
 use crate::model::label::{
-    AddLabelRequest, LabelBrief, LabelResponse, LabelUserItem, ListLabelUsersRequest,
-    ListUserLabelsRequest, RemoveLabelRequest, UpdateLabelRequest, UserBrief, UserLabelItem,
-    UserLabelResponse,
+    AddLabelRequest, CreateLabelRequest, LabelBrief, LabelResponse, LabelUserItem,
+    ListLabelUsersRequest, ListUserLabelsRequest, RemoveLabelRequest, UpdateLabelRequest,
+    UserBrief, UserLabelItem, UserLabelResponse,
 };
 use crate::model::response::{ApiResponse, from_storage_error, ok};
-use feel_entity::label::LabelUpdate;
+use feel_entity::label::{LabelCreate, LabelUpdate};
 use poem::web::{Data, Json};
 use poem::{EndpointExt, Route, delete, get, handler, post, put};
 
 /// 标签相关路由：/api/v1/labels/...
-/// 各操作使用独立子路径区分：list / users / add / update / remove。
+/// 各操作使用独立子路径区分：create / list / users / add / update / remove。
 pub fn router() -> Route {
     Route::new()
+        .at("/create", post(create_label).around(auth_middleware))
         .at("/list", get(list_user_labels))
         .at("/users", get(list_label_users))
         .at("/add", post(add_label).around(auth_middleware))
         .at("/update", put(update_label).around(auth_middleware))
         .at("/remove", delete(remove_label).around(auth_middleware))
+}
+
+// -- POST /labels/create — 创建标签本体 --
+
+#[handler]
+async fn create_label(
+    state: Data<&AppState>,
+    body: Json<CreateLabelRequest>,
+) -> Json<ApiResponse<LabelResponse>> {
+    // 注：标签创建权限（角色/管理员）待后续补充，当前仅要求登录认证
+
+    // 1. DTO → 领域模型转换
+    let create = LabelCreate {
+        name: body.0.name,
+        description: body.0.description,
+        remark: body.0.remark,
+        influence: body.0.influence,
+    };
+
+    // 2. 调用领域层（名称唯一约束由存储层保证）
+    let label = match state.label_database.create_label(&create).await {
+        Ok(l) => l,
+        Err(e) => return from_storage_error(e),
+    };
+
+    // 3. 领域模型 → DTO + 统一响应包装
+    ok(label.into())
 }
 
 // -- GET /labels — 查看用户标签 --
