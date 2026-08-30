@@ -16,15 +16,30 @@ use poem::web::{Data, Json};
 use poem::{EndpointExt, Route, delete, get, handler, post, put};
 
 /// 标签相关路由：/api/v1/labels/...
-/// 各操作使用独立子路径区分：create / list / users / add / update / remove。
+/// 各操作使用独立子路径区分：create / all / list / users / add / update / remove。
 pub fn router() -> Route {
     Route::new()
         .at("/create", post(create_label).around(auth_middleware))
+        .at("/all", get(list_all_labels))
         .at("/list", get(list_user_labels))
         .at("/users", get(list_label_users))
         .at("/add", post(add_label).around(auth_middleware))
         .at("/update", put(update_label).around(auth_middleware))
         .at("/remove", delete(remove_label).around(auth_middleware))
+}
+
+// -- GET /labels/all — 获取所有标签 --
+
+#[handler]
+async fn list_all_labels(state: Data<&AppState>) -> Json<ApiResponse<Vec<LabelResponse>>> {
+    // 1. 调用领域层（按创建时间排序）
+    let labels = match state.label_database.get_all_labels().await {
+        Ok(list) => list,
+        Err(e) => return from_storage_error(e),
+    };
+
+    // 2. 领域模型 → DTO + 统一响应包装
+    ok(labels.into_iter().map(Into::into).collect())
 }
 
 // -- POST /labels/create — 创建标签本体 --

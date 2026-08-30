@@ -17,13 +17,14 @@
 - 数据访问层：`feel_storage::database::LabelDataBase` / `CommonLabelDataBase`（已实现，含数量上限校验）
 - 持久化层：`feel_storage::repo::LabelRepo` / `SeaOrmLabelRepo`（已实现）
 
-> **参数传递：** label 接口不使用 URL 路径（`Path`）与查询串（`Query`），所有参数均通过 `Json` 请求体传递；`user_id`/`label_id` 使用 `i64` 数据库主键（`docs/features/label.md` 核心交互中的 `{uid}` 为旧表述）。各操作使用独立子路径区分（`create` / `list` / `users` / `add` / `update` / `remove`）。
+> **参数传递：** label 接口不使用 URL 路径（`Path`）与查询串（`Query`），所有参数均通过 `Json` 请求体传递；`user_id`/`label_id` 使用 `i64` 数据库主键（`docs/features/label.md` 核心交互中的 `{uid}` 为旧表述）。各操作使用独立子路径区分（`create` / `all` / `list` / `users` / `add` / `update` / `remove`）。
 
 ## 接口一览
 
 | 方法 | 路径 | Handler | 描述 | 请求体 | 认证 |
 | --- | --- | --- | --- | --- | --- |
 | POST | `/api/v1/labels/create` | `create_label` | 创建标签本体 | `CreateLabelRequest` | ✅ Bearer |
+| GET | `/api/v1/labels/all` | `list_all_labels` | 获取所有标签 | — | ❌ 公开 |
 | GET | `/api/v1/labels/list` | `list_user_labels` | 查看用户标签 | `ListUserLabelsRequest` | ❌ 公开 |
 | GET | `/api/v1/labels/users` | `list_label_users` | 查看标签下的用户 | `ListLabelUsersRequest` | ❌ 公开 |
 | POST | `/api/v1/labels/add` | `add_label` | 为用户添加标签 | `AddLabelRequest` | ✅ Bearer |
@@ -136,6 +137,81 @@ create_label handler (已实现)
 CommonLabelDataBase
   ↓ 委托
 SeaOrmLabelRepo::create_label()
+```
+
+---
+
+## GET `/api/v1/labels/all` — 获取所有标签
+
+### 当前状态
+
+✅ 已实现。
+
+### 设计意图
+
+获取全部标签本体（按创建时间排序），无请求参数。用于标签浏览/标签广场等需要展示全部标签的场景（扩展接口，非 `docs/features/label.md` 核心交互）。
+
+```
+HTTP GET /api/v1/labels/all
+  → list_all_labels handler
+    → AppState.label_database.get_all_labels()   [LabelDataBase]
+      → CommonLabelDataBase.get_all_labels()
+        → SeaOrmLabelRepo.find_all_labels()      [LabelRepo — 全量查询,按创建时间排序]
+    → 每个 LabelBase → LabelResponse（API DTO）
+    → 用 ok() 包装为 ApiResponse<Vec<LabelResponse>> 返回
+```
+
+### 响应类型 — `ApiResponse<Vec<LabelResponse>>`
+
+```rust
+#[derive(Debug, Serialize)]
+pub struct LabelResponse {
+    pub id: i64,
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+    pub enabled: bool,
+    pub created_at: String,   // ISO 8601 字符串
+    pub updated_at: String,   // ISO 8601 字符串
+}
+```
+
+**JSON 示例：**
+
+```json
+{
+    "code": 0,
+    "message": "ok",
+    "data": [
+        {
+            "id": 1,
+            "name": "Rust 开发者",
+            "description": "使用 Rust 进行开发的人",
+            "remark": "5 年 Rust 后端开发经验",
+            "influence": 100,
+            "enabled": true,
+            "created_at": "2026-07-11T03:00:00Z",
+            "updated_at": "2026-07-11T03:00:00Z"
+        }
+    ]
+}
+```
+
+### 错误码映射
+
+| 错误类型 | 业务码 | 说明 |
+| --- | --- | --- |
+| `StorageError::Db(_)` | `10003` | 数据库异常 |
+
+### 下层调用链
+
+```
+list_all_labels handler (已实现)
+  ↓ LabelDataBase::get_all_labels()
+CommonLabelDataBase
+  ↓ 委托
+SeaOrmLabelRepo::find_all_labels()
 ```
 
 ---
@@ -606,7 +682,7 @@ pub fn app_route() -> Route {
 
 ### 认证路由说明
 
-- 读取接口（查看用户标签、查看标签下的用户）公开，无需认证
+- 读取接口（获取所有标签、查看用户标签、查看标签下的用户）公开，无需认证
 - 写操作（创建标签本体、添加标签、修改备注、解除关联）使用 `.around(auth_middleware)` 保护
 - 按业务规则"用户只能管理自己的关联"，handler 需校验请求体 `user_id` 与 `AuthUser` 对应（或具备标签维护权限）
 
@@ -629,6 +705,7 @@ pub fn app_route() -> Route {
 | `docs/features/label.md` 核心交互 | 本接口 |
 | --- | --- |
 | 创建标签本体（添加标签中的"按名称创建本体"部分） | `POST /api/v1/labels/create` |
+| 获取所有标签（扩展接口，非特性文档核心交互） | `GET /api/v1/labels/all` |
 | 查看用户标签 | `GET /api/v1/labels/list`（body: `user_id`） |
 | 查看标签下的用户 | `GET /api/v1/labels/users`（body: `label_id`） |
 | 添加标签 | `POST /api/v1/labels/add` |

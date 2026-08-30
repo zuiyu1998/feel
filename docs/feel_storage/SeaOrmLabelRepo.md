@@ -134,6 +134,20 @@ async fn find_label_by_name(&self, name: &str) -> Result<Option<LabelBase>> {
 }
 ```
 
+### find_all_labels
+
+查询全部标签本体，按创建时间排序：
+
+```rust
+async fn find_all_labels(&self) -> Result<Vec<LabelBase>> {
+    let list = LabelEntity::find()
+        .order_by_asc(LabelColumn::CreatedAt)
+        .all(&self.conn)
+        .await?;
+    Ok(list.into_iter().map(Into::into).collect())
+}
+```
+
 ### create_label
 
 创建标签本体，参数为请求结构体 `LabelCreate`（`id`、`enabled`、时间戳由存储层管理），`id` 交由数据库自增：
@@ -359,6 +373,7 @@ if repo.count_user_labels(1).await? < 20 {
 | --- | --- | --- |
 | `find_label_by_id` | ✅ 已实现 | `crates/feel_storage/src/repo/label.rs` |
 | `find_label_by_name` | ✅ 已实现 | 同上 |
+| `find_all_labels` | ✅ 已实现 | 同上 |
 | `create_label` | ✅ 已实现 | 同上 |
 | `update_label` | ✅ 已实现 | 同上 |
 | `find_user_labels` | ✅ 已实现 | 同上 |

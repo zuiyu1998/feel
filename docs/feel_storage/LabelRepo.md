@@ -43,6 +43,9 @@ pub trait LabelRepo: 'static + Send + Sync {
     /// 按名称查找标签本体(名称全局唯一)
     async fn find_label_by_name(&self, name: &str) -> Result<Option<LabelBase>>;
 
+    /// 查询全部标签本体
+    async fn find_all_labels(&self) -> Result<Vec<LabelBase>>;
+
     /// 创建标签本体
     async fn create_label(&self, create: &LabelCreate) -> Result<LabelBase>;
 
@@ -83,6 +86,7 @@ pub trait LabelRepo: 'static + Send + Sync {
 | --- | --- | --- | --- |
 | `find_label_by_id` | `label_id: i64` | `Result<Option<LabelBase>>` | 按 ID 查标签本体 |
 | `find_label_by_name` | `name: &str` | `Result<Option<LabelBase>>` | 按名称查标签本体（名称全局唯一） |
+| `find_all_labels` | — | `Result<Vec<LabelBase>>` | 查询全部标签本体（按创建时间排序） |
 | `create_label` | `&LabelCreate` | `Result<LabelBase>` | 创建标签本体（名称需唯一） |
 | `update_label` | `&LabelUpdate` | `Result<LabelBase>` | 更新标签本体（如修改备注、禁用/启用） |
 | `find_user_labels` | `user_id: i64` | `Result<Vec<UserLabel>>` | 查某用户的全部关联（按创建时间排序） |
@@ -268,6 +272,7 @@ repo.delete_user_label(user_label.id).await.unwrap();
 | --- | --- | --- |
 | `find_label_by_id` | ✅ 已实现 | `crates/feel_storage/src/repo/label.rs` |
 | `find_label_by_name` | ✅ 已实现 | 同上 |
+| `find_all_labels` | ✅ 已实现 | 同上（按创建时间排序） |
 | `create_label` | ✅ 已实现 | 同上 |
 | `update_label` | ✅ 已实现 | 同上 |
 | `find_user_labels` | ✅ 已实现 | 同上 |

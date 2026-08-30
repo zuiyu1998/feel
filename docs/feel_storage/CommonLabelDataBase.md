@@ -80,6 +80,10 @@ async fn get_label(&self, label_id: i64) -> Result<Option<LabelBase>> {
 async fn get_label_by_name(&self, name: &str) -> Result<Option<LabelBase>> {
     self.label_repo.find_label_by_name(name).await
 }
+
+async fn get_all_labels(&self) -> Result<Vec<LabelBase>> {
+    self.label_repo.find_all_labels().await
+}
 ```
 
 直接转发至 `LabelRepo` 对应方法，async 传递。标签本体的唯一约束（`name`）、只增不删等规则由存储层保证。
@@ -148,6 +152,7 @@ async fn remove_label(&self, user_id: i64, label_id: i64) -> Result<()> {
 | `update_label` | `LabelRepo::update_label` | ✅ 完整 |
 | `get_label` | `LabelRepo::find_label_by_id` | ✅ 完整 |
 | `get_label_by_name` | `LabelRepo::find_label_by_name` | ✅ 完整 |
+| `get_all_labels` | `LabelRepo::find_all_labels` | ✅ 完整 |
 | `get_user_labels` | `LabelRepo::find_user_labels` | ✅ 完整 |
 | `get_users_by_label` | `LabelRepo::find_users_by_label` | ✅ 完整 |
 | `count_user_labels` | `LabelRepo::count_user_labels` | ✅ 完整 |
@@ -275,6 +280,7 @@ let label_db = CommonLabelDataBase::new(repo);
 | `update_label` | ✅ 完整 | async 委托至 `LabelRepo::update_label` |
 | `get_label` | ✅ 完整 | async 委托至 `LabelRepo::find_label_by_id` |
 | `get_label_by_name` | ✅ 完整 | async 委托至 `LabelRepo::find_label_by_name` |
+| `get_all_labels` | ✅ 完整 | async 委托至 `LabelRepo::find_all_labels` |
 | `get_user_labels` | ✅ 完整 | async 委托至 `LabelRepo::find_user_labels` |
 | `get_users_by_label` | ✅ 完整 | async 委托至 `LabelRepo::find_users_by_label` |
 | `count_user_labels` | ✅ 完整 | async 委托至 `LabelRepo::count_user_labels` |

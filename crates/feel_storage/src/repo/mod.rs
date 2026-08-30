@@ -34,6 +34,9 @@ pub trait LabelRepo: 'static + Send + Sync {
     /// 按名称查找标签本体(名称全局唯一)
     async fn find_label_by_name(&self, name: &str) -> Result<Option<LabelBase>>;
 
+    /// 查询全部标签本体
+    async fn find_all_labels(&self) -> Result<Vec<LabelBase>>;
+
     /// 创建标签本体
     async fn create_label(&self, create: &LabelCreate) -> Result<LabelBase>;
 

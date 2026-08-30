@@ -34,6 +34,14 @@ impl LabelRepo for SeaOrmLabelRepo {
         Ok(label.map(Into::into))
     }
 
+    async fn find_all_labels(&self) -> Result<Vec<LabelBase>> {
+        let list = LabelEntity::find()
+            .order_by_asc(LabelColumn::CreatedAt)
+            .all(&self.conn)
+            .await?;
+        Ok(list.into_iter().map(Into::into).collect())
+    }
+
     async fn create_label(&self, create: &LabelCreate) -> Result<LabelBase> {
         let now = Local::now();
 

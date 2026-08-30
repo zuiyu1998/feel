@@ -48,6 +48,9 @@ pub trait LabelDataBase: 'static + Send + Sync {
     /// 根据名称获取标签本体（名称全局唯一）
     async fn get_label_by_name(&self, name: &str) -> Result<Option<LabelBase>>;
 
+    /// 获取全部标签本体
+    async fn get_all_labels(&self) -> Result<Vec<LabelBase>>;
+
     /// 获取某用户的全部标签关联（按创建时间排序）
     async fn get_user_labels(&self, user_id: i64) -> Result<Vec<UserLabel>>;
 
@@ -82,6 +85,7 @@ pub trait LabelDataBase: 'static + Send + Sync {
 | `update_label` | `&LabelUpdate` | `Result<LabelBase>` | 更新标签本体（如修改备注、禁用/启用） |
 | `get_label` | `label_id: i64` | `Result<Option<LabelBase>>` | 按 ID 获取标签本体 |
 | `get_label_by_name` | `name: &str` | `Result<Option<LabelBase>>` | 按名称获取标签本体 |
+| `get_all_labels` | — | `Result<Vec<LabelBase>>` | 获取全部标签本体（按创建时间排序） |
 | `get_user_labels` | `user_id: i64` | `Result<Vec<UserLabel>>` | 查某用户的全部关联（按创建时间排序） |
 | `get_users_by_label` | `label_id: i64` | `Result<Vec<UserLabel>>` | 查某标签下的全部用户关联 |
 | `count_user_labels` | `user_id: i64` | `Result<u64>` | 统计关联数量（数量上限校验） |
@@ -120,6 +124,7 @@ impl CommonLabelDataBase {
 | `update_label` | `update_label` | async 传递 |
 | `get_label` | `find_label_by_id` | async 传递 |
 | `get_label_by_name` | `find_label_by_name` | async 传递 |
+| `get_all_labels` | `find_all_labels` | async 传递 |
 | `get_user_labels` | `find_user_labels` | async 传递 |
 | `get_users_by_label` | `find_users_by_label` | async 传递 |
 | `count_user_labels` | `count_user_labels` | async 传递 |
@@ -274,6 +279,7 @@ let user_labels = label_db.get_user_labels(1).await?;
 | `update_label` | ✅ 已实现 | 同上 |
 | `get_label` | ✅ 已实现 | 同上 |
 | `get_label_by_name` | ✅ 已实现 | 同上 |
+| `get_all_labels` | ✅ 已实现 | 同上 |
 | `get_user_labels` | ✅ 已实现 | 同上 |
 | `get_users_by_label` | ✅ 已实现 | 同上 |
 | `count_user_labels` | ✅ 已实现 | 同上 |

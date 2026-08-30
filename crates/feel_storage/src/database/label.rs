@@ -32,6 +32,9 @@ pub trait LabelDataBase: 'static + Send + Sync {
     /// 根据名称获取标签本体(名称全局唯一)
     async fn get_label_by_name(&self, name: &str) -> Result<Option<LabelBase>>;
 
+    /// 获取全部标签本体
+    async fn get_all_labels(&self) -> Result<Vec<LabelBase>>;
+
     /// 获取某用户的全部标签关联(按创建时间排序)
     async fn get_user_labels(&self, user_id: i64) -> Result<Vec<UserLabel>>;
 
@@ -64,6 +67,10 @@ impl LabelDataBase for CommonLabelDataBase {
 
     async fn get_label_by_name(&self, name: &str) -> Result<Option<LabelBase>> {
         self.label_repo.find_label_by_name(name).await
+    }
+
+    async fn get_all_labels(&self) -> Result<Vec<LabelBase>> {
+        self.label_repo.find_all_labels().await
     }
 
     async fn get_user_labels(&self, user_id: i64) -> Result<Vec<UserLabel>> {
