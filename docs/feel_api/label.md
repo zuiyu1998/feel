@@ -17,7 +17,7 @@
 - 数据访问层：`feel_storage::database::LabelDataBase` / `CommonLabelDataBase`（已实现，含数量上限校验）
 - 持久化层：`feel_storage::repo::LabelRepo` / `SeaOrmLabelRepo`（已实现）
 
-> **参数传递：** label 接口不使用 URL 路径（`Path`）与查询串（`Query`），所有参数均通过 `Json` 请求体传递；`user_id`/`label_id` 使用 `i64` 数据库主键（`docs/features/label.md` 核心交互中的 `{uid}` 为旧表述）。各操作使用独立子路径区分（`create` / `all` / `list` / `users` / `add` / `update` / `remove`）。
+> **参数传递：** label 接口不使用 URL 路径（`Path`）与查询串（`Query`），所有参数均通过 `Json` 请求体传递；`label_id` 等使用 `i64` 数据库主键。添加标签（add）的请求体使用 `user_uid`（`String` 业务键，关联 `UserBase.uid`），由 handler 解析为 `user_id` 后调用领域层。各操作使用独立子路径区分（`create` / `all` / `list` / `users` / `add` / `update` / `remove`）。
 
 ## 接口一览
 
@@ -27,7 +27,7 @@
 | GET | `/api/v1/labels/all` | `list_all_labels` | 获取所有标签 | — | ❌ 公开 |
 | GET | `/api/v1/labels/list` | `list_user_labels` | 查看用户标签 | `ListUserLabelsRequest` | ❌ 公开 |
 | GET | `/api/v1/labels/users` | `list_label_users` | 查看标签下的用户 | `ListLabelUsersRequest` | ❌ 公开 |
-| POST | `/api/v1/labels/add` | `add_label` | 为用户添加标签 | `AddLabelRequest` | ✅ Bearer |
+| POST | `/api/v1/labels/add` | `add_label` | 为用户添加标签 | `AddLabelRequest` | ❌ 公开 |
 | PUT | `/api/v1/labels/update` | `update_label` | 修改标签备注 | `UpdateLabelRequest` | ✅ Bearer |
 | DELETE | `/api/v1/labels/remove` | `remove_label` | 解除关联 | `RemoveLabelRequest` | ✅ Bearer |
 
@@ -391,13 +391,12 @@ SeaOrmLabelRepo::find_users_by_label(label_id)
 
 ### 设计意图
 
-已登录用户为画像添加一个标签（携带关联）。若标签本体不存在，可先按名称创建本体再关联。
+用户为画像添加一个标签（携带关联，公开接口，无需认证）。若标签本体不存在，可先按名称创建本体再关联。
 
 ```
-HTTP POST /api/v1/labels/add  (Authorization: Bearer <token>; Json<AddLabelRequest>)
-  → auth_middleware (JWT 验证,注入 AuthUser)
+HTTP POST /api/v1/labels/add  (Json<AddLabelRequest>)
   → add_label handler
-    → 校验请求体 user_id 为当前登录用户(仅能管理自己的关联)
+    → 将请求体 user_uid 解析为 user_id(UserDataBase::get_user)
     → AppState.label_database.add_label(user_id, label_id)   [LabelDataBase]
       → CommonLabelDataBase.add_label()
         ├─ 1. count_user_labels(user_id)          [数量上限校验,>= 20 返回 Business 错误]
@@ -413,7 +412,7 @@ HTTP POST /api/v1/labels/add  (Authorization: Bearer <token>; Json<AddLabelReque
 ```rust
 #[derive(Debug, Deserialize)]
 pub struct AddLabelRequest {
-    pub user_id: i64,       // 归属用户(需与登录用户一致)
+    pub user_uid: String,   // 归属用户（业务键,需与登录用户一致）
     pub label_id: i64,      // 要关联的标签本体 ID
 }
 ```
@@ -422,7 +421,7 @@ pub struct AddLabelRequest {
 
 ```json
 {
-    "user_id": 1,
+    "user_uid": "uid_abc123",
     "label_id": 1
 }
 ```
@@ -477,12 +476,12 @@ pub struct UserLabelResponse {
 | `StorageError::Business(_)` | `10006` | 标签关联数量达到上限 20 |
 | `StorageError::Db(DbErr::RecordNotFound)` | `10004` | 标签本体不存在 |
 | `StorageError::Db(_)` | `10003` | 数据库异常（含唯一约束冲突） |
-| `StorageError::Authentication(_)` | `10005` | token 缺失或无效 |
 
 ### 下层调用链
 
 ```
 add_label handler (已实现)
+  ├─ UserDataBase::get_user(user_uid) 解析出 user_id
   ↓ LabelDataBase::add_label(user_id, label_id)
 CommonLabelDataBase::add_label()
   ├─ count_user_labels(user_id)   → 超限返回 Error::Business
@@ -656,7 +655,7 @@ pub fn router() -> Route {
     Route::new()
         .at("/list", get(list_user_labels))
         .at("/users", get(list_label_users))
-        .at("/add", post(add_label).around(auth_middleware))
+        .at("/add", post(add_label))
         .at("/update", put(update_label).around(auth_middleware))
         .at("/remove", delete(remove_label).around(auth_middleware))
 }
@@ -683,7 +682,7 @@ pub fn app_route() -> Route {
 ### 认证路由说明
 
 - 读取接口（获取所有标签、查看用户标签、查看标签下的用户）公开，无需认证
-- 写操作（创建标签本体、添加标签、修改备注、解除关联）使用 `.around(auth_middleware)` 保护
+- 写操作（创建标签本体、修改备注、解除关联）使用 `.around(auth_middleware)` 保护
 - 按业务规则"用户只能管理自己的关联"，handler 需校验请求体 `user_id` 与 `AuthUser` 对应（或具备标签维护权限）
 
 ---

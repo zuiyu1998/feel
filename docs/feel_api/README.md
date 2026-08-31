@@ -64,10 +64,10 @@ pub struct AppState {
 
 ## 认证中间件（AuthMiddleware）
 
-`auth.rs` 提供 JWT Bearer token 认证中间件 `auth_middleware`，配合 Poem 的 `EndpointExt::around` 使用：
+`auth.rs` 提供 JWT Bearer token 认证中间件 `auth_middleware`，配合 Poem 的 `EndpointExt::around` 使用。当前用于标签模块的部分写操作（create / update / remove）：
 
 ```rust
-.at("/info", get(info).around(auth_middleware))
+.at("/create", post(create_label).around(auth_middleware))
 ```
 
 中间件流程：
@@ -96,16 +96,16 @@ pub struct AppState {
 | POST | `/api/v1/users/unregister/:user_id`  | `unregister`  | 注销用户         | ❌    | ✅ 已实现 |
 | POST | `/api/v1/users/login`                | `login`       | 用户登录         | ❌    | ✅ 已实现 |
 | POST | `/api/v1/users/logout`               | `logout`      | 用户登出         | ❌    | 🚧 占位 |
-| GET  | `/api/v1/users/info`                 | `info`        | 获取当前用户信息 | ✅ Bearer | ✅ 已实现 |
+| GET  | `/api/v1/users/info/:uid`           | `info`        | 获取用户信息     | ❌    | ✅ 已实现 |
 | POST | `/api/v1/labels/create`             | `create_label` | 创建标签本体   | ✅ Bearer | ✅ 已实现 |
 | GET  | `/api/v1/labels/all`                | `list_all_labels` | 获取所有标签 | ❌ | ✅ 已实现 |
 | GET  | `/api/v1/labels/list`               | `list_user_labels` | 查看用户标签 | ❌ | ✅ 已实现 |
 | GET  | `/api/v1/labels/users`               | `list_label_users` | 查看标签下的用户 | ❌ | ✅ 已实现 |
-| POST | `/api/v1/labels/add`                 | `add_label`   | 为用户添加标签   | ✅ Bearer | ✅ 已实现 |
+| POST | `/api/v1/labels/add`                 | `add_label`   | 为用户添加标签   | ❌ | ✅ 已实现 |
 | PUT  | `/api/v1/labels/update`              | `update_label`| 修改标签备注     | ✅ Bearer | ✅ 已实现 |
 | DELETE | `/api/v1/labels/remove`            | `remove_label` | 解除关联 | ✅ Bearer | ✅ 已实现 |
 
-> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 需要通过 `Authorization: Bearer <token>` 认证。标签相关接口已实现，见 [label.md](label.md)。
+> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 为公开接口，通过路径参数 `:uid` 查询用户信息。标签相关接口已实现，见 [label.md](label.md)。
 
 ## 架构说明
 

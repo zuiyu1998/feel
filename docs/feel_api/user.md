@@ -679,30 +679,25 @@ fn logout(&self, user_id: u32) -> Result<()>;
 
 ---
 
-## GET `/api/v1/users/info` — 获取当前用户信息
+## GET `/api/v1/users/info/:uid` — 获取用户信息
 
 ### 当前状态
 
-**Handler 已完整实现**，通过 JWT Bearer token 认证后返回当前用户信息。
+**Handler 已完整实现**，通过路径参数 `:uid` 获取指定用户信息（公开接口，无需认证）。
 
 ```rust
 #[handler]
 async fn info(
     state: Data<&AppState>,
-    req: &poem::Request,
+    Path(uid): Path<String>,
 ) -> Json<ApiResponse<UserInfoResponse>> {
-    // 1. Extract auth info injected by middleware
-    let auth = req.extensions()
-        .get::<AuthUser>()
-        .expect("AuthUser not found — missing auth middleware");
-
-    // 2. Fetch user info by uid
-    let user_base = match state.user_database.get_user(&auth.uid).await {
+    // 1. Fetch user info by uid (from path parameter)
+    let user_base = match state.user_database.get_user(&uid).await {
         Ok(u) => u,
         Err(e) => return from_storage_error(e),
     };
 
-    // 3. Domain model → DTO + unified response
+    // 2. Domain model → DTO + unified response
     let response = UserInfoResponse {
         id: user_base.id,
         uid: user_base.uid,
@@ -718,30 +713,22 @@ async fn info(
 }
 ```
 
-### 认证方式
+### 请求参数
 
-此接口需要在请求头中携带 JWT Bearer token：
+`:uid` 为路径参数，在 Poem 中通过 `Path<String>` 提取：
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1...
+GET /api/v1/users/info/uid_abc123
 ```
 
-token 由 `POST /api/v1/users/login` 接口签发。认证由 `auth_middleware` 中间件统一处理：
-
-1. 提取 `Authorization: Bearer <token>`
-2. 调用 `UserDataBase::parse_token` 验证签名和过期
-3. 将 `AuthUser { uid }` 注入 `req.extensions`
-4. handler 通过 `req.extensions().get::<AuthUser>()` 获取用户 uid
-
-认证失败返回 HTTP 401 + 统一 JSON 错误体。
+> **说明：** 该接口不依赖 `auth_middleware` 注入的 `AuthUser`，`uid` 直接来自 URL 路径，因此为公开接口，可查询任意指定用户的信息。
 
 ### 接口流程
 
 ```
-HTTP GET /api/v1/users/info (Authorization: Bearer <token>)
-  → auth_middleware (JWT 验证)
+HTTP GET /api/v1/users/info/:uid
   → info handler
-    → 从 req.extensions 获取 AuthUser.uid
+    → 从路径提取 uid (Path<String>)
     → AppState.user_database.get_user(&uid)    [UserDataBase trait]
       → CommonUserDataBase.get_user()
         → SeaOrmUserRepo.find_by_uid(uid)     [UserRepo trait]
@@ -792,7 +779,6 @@ pub struct UserInfoResponse {
 
 | HTTP 状态码 | 业务码     | 说明                     |
 |-------------|------------|--------------------------|
-| 401         | `10005`    | Token 缺失或无效         |
 | 200         | `10004`    | 用户不存在               |
 | 200         | `10003`    | 数据库异常               |
 
@@ -822,12 +808,10 @@ async fn find_by_uid(&self, uid: &str) -> Result<Option<UserBase>> {
 
 | crate / 模块                | 作用                                    |
 |-----------------------------|-----------------------------------------|
-| `feel_api::auth`            | 认证中间件（`AuthUser`、`auth_middleware`）|
 | `feel_api::model`           | API DTO（`UserInfoResponse`、`ApiResponse`）|
 | `feel_entity`               | 领域模型（`UserBase`）                  |
 | `feel_storage`              | 提供 `UserDataBase` trait 及其实现     |
 | `feel_sea_orm`              | Sea-ORM 实体（`users` 表）             |
-| `jsonwebtoken`              | JWT 签验（通过 `feel_storage` 依赖）   |
 
 ---
 
@@ -841,7 +825,7 @@ pub fn router() -> Route {
         .at("/unregister/:user_id", post(unregister))
         .at("/login", post(login))
         .at("/logout", post(logout))
-        .at("/info", get(info).around(auth_middleware))
+        .at("/info/:uid", get(info))
 }
 ```
 
@@ -850,7 +834,9 @@ pub fn router() -> Route {
 ```rust
 // cmd/feel_api/src/lib.rs
 pub fn app_route() -> Route {
-    Route::new().nest("/users", user::router())
+    Route::new()
+        .nest("/users", user::router())
+        .nest("/labels", label::router())
 }
 ```
 
@@ -858,6 +844,5 @@ pub fn app_route() -> Route {
 
 ### 认证路由说明
 
-- `GET /info` 使用 `.around(auth_middleware)` 中间件保护
-- 其余接口（register、login 等）无需认证
-- `auth_middleware` 定义在 `cmd/feel_api/src/auth.rs`
+- user 模块所有接口均无需认证（`GET /info/:uid` 为公开的按 uid 查询用户信息）
+- `auth_middleware` 目前用于 label 模块的写操作（create / add / update / remove），定义在 `cmd/feel_api/src/auth.rs`

@@ -1,12 +1,11 @@
 use crate::AppState;
-use crate::auth::{AuthUser, auth_middleware};
 use crate::model::response::{ApiResponse, from_storage_error, ok};
 use crate::model::user::{
     LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserInfoResponse,
 };
 use feel_entity::user::{UserLogin, UserRegister};
 use poem::web::{Data, Json, Path};
-use poem::{EndpointExt, Route, get, handler, post};
+use poem::{Route, get, handler, post};
 
 pub fn router() -> Route {
     Route::new()
@@ -14,7 +13,7 @@ pub fn router() -> Route {
         .at("/unregister/:user_id", post(unregister))
         .at("/login", post(login))
         .at("/logout", post(logout))
-        .at("/info", get(info).around(auth_middleware))
+        .at("/info/:uid", get(info))
 }
 
 // -- register --
@@ -117,20 +116,17 @@ async fn logout() {}
 // -- info --
 
 #[handler]
-async fn info(state: Data<&AppState>, req: &poem::Request) -> Json<ApiResponse<UserInfoResponse>> {
-    // 1. Extract auth info injected by middleware
-    let auth = req
-        .extensions()
-        .get::<AuthUser>()
-        .expect("AuthUser not found — missing auth middleware");
-
-    // 2. Fetch user info by uid
-    let user_base = match state.user_database.get_user(&auth.uid).await {
+async fn info(
+    state: Data<&AppState>,
+    Path(uid): Path<String>,
+) -> Json<ApiResponse<UserInfoResponse>> {
+    // 1. Fetch user info by uid (from path parameter)
+    let user_base = match state.user_database.get_user(&uid).await {
         Ok(u) => u,
         Err(e) => return from_storage_error(e),
     };
 
-    // 3. Domain model → DTO + unified response
+    // 2. Domain model → DTO + unified response
     let response = UserInfoResponse {
         id: user_base.id,
         uid: user_base.uid,

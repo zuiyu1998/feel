@@ -23,7 +23,7 @@ pub fn router() -> Route {
         .at("/all", get(list_all_labels))
         .at("/list", get(list_user_labels))
         .at("/users", get(list_label_users))
-        .at("/add", post(add_label).around(auth_middleware))
+        .at("/add", post(add_label))
         .at("/update", put(update_label).around(auth_middleware))
         .at("/remove", delete(remove_label).around(auth_middleware))
 }
@@ -147,30 +147,18 @@ async fn list_label_users(
 #[handler]
 async fn add_label(
     state: Data<&AppState>,
-    req: &poem::Request,
     body: Json<AddLabelRequest>,
 ) -> Json<ApiResponse<UserLabelResponse>> {
-    // 1. 认证：仅能管理自己的关联（uid -> user_id 映射）
-    let auth = req
-        .extensions()
-        .get::<AuthUser>()
-        .expect("AuthUser not found — missing auth middleware");
-
-    let me = match state.user_database.get_user(&auth.uid).await {
+    // 1. 将 user_uid（业务键）解析为 user_id（数据库主键）
+    let user = match state.user_database.get_user(&body.0.user_uid).await {
         Ok(u) => u,
         Err(e) => return from_storage_error(e),
     };
-    if me.id != body.0.user_id {
-        return from_storage_error(feel_storage::Error::Business(format!(
-            "User {} cannot manage labels of user {}",
-            me.id, body.0.user_id
-        )));
-    }
 
     // 2. 调用领域层（内部校验数量上限 20）
     let user_label = match state
         .label_database
-        .add_label(body.0.user_id, body.0.label_id)
+        .add_label(user.id, body.0.label_id)
         .await
     {
         Ok(ul) => ul,

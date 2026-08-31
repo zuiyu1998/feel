@@ -20,7 +20,7 @@ pub struct ListLabelUsersRequest {
 /// 添加标签关联请求体（POST /labels）
 #[derive(Debug, Deserialize)]
 pub struct AddLabelRequest {
-    pub user_id: i64,
+    pub user_uid: String, // 归属用户（业务键,关联 UserBase.uid）
     pub label_id: i64,
 }
 
