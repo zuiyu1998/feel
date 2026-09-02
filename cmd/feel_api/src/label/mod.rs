@@ -6,9 +6,9 @@
 use crate::AppState;
 use crate::auth::{AuthUser, auth_middleware};
 use crate::model::label::{
-    AddLabelRequest, CreateLabelRequest, LabelBrief, LabelResponse, LabelUserItem,
-    ListLabelUsersRequest, ListUserLabelsRequest, RemoveLabelRequest, UpdateLabelRequest,
-    UserBrief, UserLabelItem, UserLabelResponse,
+    AddLabelRequest, CreateLabelRequest, LabelResponse, LabelUserItem, ListLabelUsersRequest,
+    ListUserLabelsRequest, RemoveLabelRequest, UpdateLabelRequest, UserBrief, UserLabelItem,
+    UserLabelResponse,
 };
 use crate::model::response::{ApiResponse, from_storage_error, ok};
 use feel_entity::label::{LabelCreate, LabelUpdate};
@@ -82,7 +82,7 @@ async fn list_user_labels(
         Err(e) => return from_storage_error(e),
     };
 
-    // 2. 逐个查询标签本体信息，组装列表
+    // 2. 逐个查询标签本体信息，平铺 LabelBase 字段组装列表
     let mut items = Vec::new();
     for ul in user_labels {
         let label = match state.label_database.get_label(ul.label_id).await {
@@ -90,14 +90,7 @@ async fn list_user_labels(
             Ok(None) => continue,
             Err(e) => return from_storage_error(e),
         };
-        items.push(UserLabelItem {
-            id: ul.id,
-            label: LabelBrief {
-                id: label.id,
-                name: label.name,
-                remark: label.remark,
-            },
-        });
+        items.push(UserLabelItem::from(label));
     }
 
     ok(items)

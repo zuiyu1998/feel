@@ -101,19 +101,35 @@ impl From<UserLabel> for UserLabelResponse {
     }
 }
 
-/// 标签摘要（内嵌于"查看用户标签"列表项）
-#[derive(Debug, Serialize)]
-pub struct LabelBrief {
-    pub id: i64,
-    pub name: String,
-    pub remark: String,
-}
-
 /// 查看用户标签列表项
+///
+/// 平铺返回标签本体（LabelBase）的全部字段：不再内嵌 `LabelBrief` 摘要，
+/// 列表元素即标签自身数据（字段与 [`LabelResponse`] 一致，JSON 同构）。
 #[derive(Debug, Serialize)]
 pub struct UserLabelItem {
     pub id: i64,
-    pub label: LabelBrief,
+    pub name: String,
+    pub description: String,
+    pub remark: String,
+    pub influence: i64,
+    pub enabled: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+impl From<LabelBase> for UserLabelItem {
+    fn from(value: LabelBase) -> Self {
+        UserLabelItem {
+            id: value.id,
+            name: value.name,
+            description: value.description,
+            remark: value.remark,
+            influence: value.influence,
+            enabled: value.enabled,
+            created_at: value.created_at.to_rfc3339(),
+            updated_at: value.updated_at.to_rfc3339(),
+        }
+    }
 }
 
 /// 用户摘要（内嵌于"查看标签下的用户"列表项）

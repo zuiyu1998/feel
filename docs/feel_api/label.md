@@ -224,7 +224,7 @@ SeaOrmLabelRepo::find_all_labels()
 
 ### 设计意图
 
-任何用户（含未登录）可查看某用户的公开标签集合，这是"认识用户"的入口。返回该用户按创建时间排序的关联列表，每个关联内嵌标签本体信息（含备注）。
+任何用户（含未登录）可查看某用户的公开标签集合，这是"认识用户"的入口。返回该用户按创建时间排序的关联列表，列表元素平铺标签本体（LabelBase）的全部字段（字段同 `LabelResponse`，JSON 同构）。
 
 ```
 HTTP GET /api/v1/labels/list  (Json<ListUserLabelsRequest>)
@@ -233,7 +233,7 @@ HTTP GET /api/v1/labels/list  (Json<ListUserLabelsRequest>)
     → AppState.label_database.get_user_labels(user_id)   [LabelDataBase]
       → CommonLabelDataBase.get_user_labels()
         → SeaOrmLabelRepo.find_user_labels(user_id)      [LabelRepo — 按创建时间排序]
-    → 对每个 UserLabel 二次查询 get_label(label_id) 组装 LabelBrief
+    → 对每个 UserLabel 二次查询 get_label(label_id)，LabelBase → UserLabelItem（平铺全字段）
     → 用 ok() 包装为 ApiResponse<Vec<UserLabelItem>> 返回
 ```
 
@@ -259,15 +259,14 @@ pub struct ListUserLabelsRequest {
 ```rust
 #[derive(Debug, Serialize)]
 pub struct UserLabelItem {
-    pub id: i64,                      // UserLabel 关联 ID
-    pub label: LabelBrief,            // 内嵌标签本体信息
-}
-
-#[derive(Debug, Serialize)]
-pub struct LabelBrief {
-    pub id: i64,
+    pub id: i64,                      // 标签 ID（LabelBase.id，同 LabelResponse）
     pub name: String,
+    pub description: String,
     pub remark: String,               // 标签备注（所有用户共享）
+    pub influence: i64,
+    pub enabled: bool,
+    pub created_at: String,
+    pub updated_at: String,
 }
 ```
 
@@ -279,8 +278,14 @@ pub struct LabelBrief {
     "message": "ok",
     "data": [
         {
-            "id": 10,
-            "label": { "id": 1, "name": "Rust 开发者", "remark": "5 年 Rust 后端开发经验" }
+            "id": 1,
+            "name": "Rust 开发者",
+            "description": "Rust 后端开发者标签",
+            "remark": "5 年 Rust 后端开发经验",
+            "influence": 5,
+            "enabled": true,
+            "created_at": "2025-01-01T00:00:00Z",
+            "updated_at": "2025-01-01T00:00:00Z"
         }
     ]
 }
@@ -295,7 +300,7 @@ CommonLabelDataBase
   ↓ 委托
 SeaOrmLabelRepo::find_user_labels(user_id)
   ↓ 二次查询
-LabelDataBase::get_label(label_id) → LabelBase → LabelBrief
+LabelDataBase::get_label(label_id) → LabelBase → UserLabelItem（平铺全字段）
 ```
 
 ---
