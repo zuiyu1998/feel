@@ -4,22 +4,24 @@
 
 `feel_api` 是 feel 平台的 **HTTP API 服务**，基于 [Poem](https://github.com/poem-web/poem) 框架构建，位于 `cmd/feel_api/`。
 
-负责提供用户注册、登录、注销等 RESTful 接口，通过 `feel_storage` 和 `feel_core` 与数据库交互。
+负责提供用户与标签相关的 RESTful 接口（注册、登录、用户信息、标签增删改查等），通过 `feel_storage` 和 `feel_core` 与数据库交互。
 
 ## 模块位置
 
 ```
 cmd/feel_api/src/
 ├── main.rs      # 入口：启动 HTTP 服务器
-├── lib.rs       # 路由、AppState、ApiConfig
+├── lib.rs       # 路由挂载、AppState、ApiConfig、init_app_state
 ├── auth.rs      # JWT 认证中间件
 ├── model/       # API 专用 DTO（请求/响应数据模型）
 │   ├── mod.rs
 │   ├── user.rs      # 用户接口 DTO
+│   ├── label.rs     # 标签接口 DTO
 │   └── response.rs  # 通用响应封装 ApiResponse<T>
-└── user/
-    └── mod.rs   # 用户相关接口
-    （label/ 与 model/label.rs 为规划中,见 label.md）
+├── user/
+│   └── mod.rs   # 用户相关接口（/api/v1/users/*）
+└── label/
+    └── mod.rs   # 标签相关接口（/api/v1/labels/*）
 ```
 
 ## 运行方式
@@ -57,10 +59,11 @@ pub struct ApiConfig {
 ```rust
 pub struct AppState {
     pub user_database: Arc<dyn UserDataBase>,
+    pub label_database: Arc<dyn LabelDataBase>,
 }
 ```
 
-启动时初始化数据库连接池和 Redis 连接，创建 `CommonUserDataBase` 实例（含 `UserRepo` + `UserCache` + `jwt_secret`）注入到 Poem 的共享状态中，供各 handler 使用。
+启动时（`init_app_state`）连接 PostgreSQL 并自动执行迁移（`Migrator::up`），初始化 Redis 客户端，创建 `CommonUserDataBase`（`SeaOrmUserRepo` + `CommonUserCache` + `jwt_secret`）与 `CommonLabelDataBase`（`SeaOrmLabelRepo`）实例注入到 Poem 的共享状态中，供各 handler 使用。路由在 `app_route()` 中挂载：`/users` 与 `/labels`。
 
 ## 认证中间件（AuthMiddleware）
 

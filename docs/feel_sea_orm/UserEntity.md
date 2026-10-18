@@ -85,7 +85,7 @@ pub struct Model {
 
 ```sql
 CREATE TABLE users (
-    id         BIGINT       PRIMARY KEY,
+    id         BIGSERIAL    PRIMARY KEY,
     uid        VARCHAR      NOT NULL UNIQUE,
     name       VARCHAR      NOT NULL,
     avatar     VARCHAR      NOT NULL,
@@ -101,7 +101,7 @@ CREATE INDEX idx_users_uid ON users (uid);
 
 ### auto_increment = false 说明
 
-`id` 字段设置了 `auto_increment = false`，表示主键不由数据库自增生成，而是由应用层通过 `typedflake` 分布式 ID 生成器在代码中指定，以保证分布式环境下的唯一性。
+实体上 `id` 声明为 `auto_increment = false`：SeaORM 不会在插入后自动回填主键，因此 `SeaOrmUserRepo::register` 以 `id: NotSet` 交由数据库序列（`BIGSERIAL`）生成自增主键。用户业务键 `uid` 由 `typedflake::id!(UserId)` 生成全局唯一字符串。
 
 ---
 
@@ -223,7 +223,7 @@ let user_base: UserBase = user.into();
 | 项                  | 状态 | 说明                           |
 | ------------------- | ---- | ------------------------------ |
 | 字段定义            | ✅    | 9 个字段完整定义               |
-| 主键策略            | ✅    | 非自增，由 typedflake 生成     |
+| 主键策略            | ✅    | 数据库自增（`NotSet`），`uid` 由 typedflake 生成 |
 | 索引                | ✅    | uid 字段唯一索引               |
 | Relation            | 🚧 空 | 未定义 ORM 关系                |
 | ActiveModelBehavior | ✅    | 默认实现，无自定义钩子         |

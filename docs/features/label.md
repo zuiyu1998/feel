@@ -169,16 +169,23 @@ UserBase (1) ──────── (N) UserLabel (N) ────────
 任何用户(含未登录)可查看某用户的公开标签集合,这是"认识用户"的入口:
 
 ```
-GET /api/user/{uid}/labels
+GET /api/v1/labels/list
+Body: { "user_id": 1 }
 ```
 
-返回该用户按创建时间排序的关联列表,每个关联内嵌标签本体信息(含备注):
+返回该用户按创建时间排序的标签列表,列表元素平铺标签本体信息(字段同 `LabelResponse`):
 
 ```json
 [
     {
-        "id": 10,
-        "label": { "id": 1, "name": "Rust 开发者", "remark": "5 年 Rust 后端开发经验" }
+        "id": 1,
+        "name": "Rust 开发者",
+        "description": "Rust 后端开发者标签",
+        "remark": "5 年 Rust 后端开发经验",
+        "influence": 5,
+        "enabled": true,
+        "created_at": "2025-01-01T00:00:00Z",
+        "updated_at": "2025-01-01T00:00:00Z"
     }
 ]
 ```
@@ -188,7 +195,8 @@ GET /api/user/{uid}/labels
 任何用户(含未登录)可查看某个标签下关联的所有用户,这是"按标签认识一群人"的入口(与"查看用户标签"互为反向):
 
 ```
-GET /api/labels/{label_id}/users
+GET /api/v1/labels/users
+Body: { "label_id": 1 }
 ```
 
 返回关联了该标签的用户列表:
@@ -196,7 +204,7 @@ GET /api/labels/{label_id}/users
 ```json
 [
     {
-        "user": { "uid": "uid_abc123", "name": "张三", "avatar": "https://example.com/avatar.png" }
+        "user": { "user_id": 42, "name": "张三", "avatar": "https://example.com/avatar.png" }
     }
 ]
 ```
@@ -206,25 +214,19 @@ GET /api/labels/{label_id}/users
 用户为画像添加一个标签:
 
 ```
-POST /api/user/{uid}/labels
-Body: { "label_id": 1 }
+POST /api/v1/labels/add
+Body: { "user_uid": "uid_abc123", "label_id": 1 }
 ```
 
-若标签不存在,也可按名称创建本体后再关联:
-
-```
-Body: { "name": "马拉松爱好者", "description": "", "influence": 50, "remark": "" }
-```
-
-校验通过后创建 `UserLabel` 关联(必要时先创建 `LabelBase`),返回完整关联数据。
+若标签不存在,可先通过 `POST /api/v1/labels/create` 创建标签本体,再调用 `/add` 关联;关联校验数量上限(20),校验通过后创建 `UserLabel` 关联,返回完整关联数据。
 
 ### 修改标签备注
 
 更新标签本体的备注(需具备标签维护权限):
 
 ```
-PUT /api/labels/{label_id}
-Body: { "remark": "跑过 5 个全马" }
+PUT /api/v1/labels/update
+Body: { "label_id": 1, "remark": "跑过 5 个全马" }
 ```
 
 ### 解除关联
@@ -232,7 +234,8 @@ Body: { "remark": "跑过 5 个全马" }
 用户移除自己画像上的某个标签(仅解除关联,不删除公有标签本体):
 
 ```
-DELETE /api/user/{uid}/labels/{user_label_id}
+DELETE /api/v1/labels/remove
+Body: { "user_id": 1, "label_id": 1 }
 ```
 
 ## 与现有实现的关系
@@ -242,7 +245,7 @@ DELETE /api/user/{uid}/labels/{user_label_id}
 | `feel_entity::label` | 已有 `LabelBase`(含 `remark` 字段)与 `UserLabel` | — |
 | `feel_sea_orm` | 已有 `label`、`user_label` ORM 实体(含 `From<Model>` 转换) | — |
 | `feel_storage` | 已有 `LabelRepo`/`SeaOrmLabelRepo`(统一操作 `LabelBase` 与 `UserLabel`,按 `user_id` 过滤)+ `LabelDataBase`/`CommonLabelDataBase`(数据访问层,含数量上限校验) | — |
-| `feel_api` | 暂无 label 相关 handler | 新增标签增删改查接口,以及"查看标签下的用户"接口(设计见 `docs/feel_api/label.md`) |
+| `feel_api` | 已实现全部标签接口(见 `docs/feel_api/label.md`) | — |
 | `migration` | 已有 `label`、`user_label` 建表迁移 | — |
 
 ## 设计说明
