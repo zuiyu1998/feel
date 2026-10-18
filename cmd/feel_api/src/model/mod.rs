@@ -5,6 +5,7 @@
 //! - 输入校验和字段映射
 //! - API 版本兼容性
 
+pub mod content;
 pub mod label;
 pub mod response;
 pub mod user;

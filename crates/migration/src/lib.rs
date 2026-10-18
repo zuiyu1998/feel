@@ -4,6 +4,7 @@ mod m20260207_083750_add_users;
 mod m20260208_000000_add_user_credentials;
 mod m20260209_000000_add_labels;
 mod m20260209_000001_add_user_labels;
+mod m20260210_000000_add_content;
 
 pub struct Migrator;
 
@@ -15,6 +16,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260208_000000_add_user_credentials::Migration),
             Box::new(m20260209_000000_add_labels::Migration),
             Box::new(m20260209_000001_add_user_labels::Migration),
+            Box::new(m20260210_000000_add_content::Migration),
         ]
     }
 }

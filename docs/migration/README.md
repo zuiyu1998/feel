@@ -16,7 +16,8 @@ crates/migration/src/
 ├── m20260207_083750_add_users.rs           # users 表
 ├── m20260208_000000_add_user_credentials.rs# user_credentials 表
 ├── m20260209_000000_add_labels.rs          # label 表
-└── m20260209_000001_add_user_labels.rs     # user_label 表
+├── m20260209_000001_add_user_labels.rs     # user_label 表
+└── m20260210_000000_add_content.rs         # content / content_article / content_video 表
 ```
 
 ## Migrator 定义
@@ -31,6 +32,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260208_000000_add_user_credentials::Migration),
             Box::new(m20260209_000000_add_labels::Migration),
             Box::new(m20260209_000001_add_user_labels::Migration),
+            Box::new(m20260210_000000_add_content::Migration),
         ]
     }
 }
@@ -46,6 +48,7 @@ impl MigratorTrait for Migrator {
 | `m20260208_000000_add_user_credentials` | `user_credentials` | 唯一索引 `idx_user_credentials_user_uid_credential_name (user_uid, credential_name)` |
 | `m20260209_000000_add_labels` | `label` | `name` UNIQUE（标签名全局唯一） |
 | `m20260209_000001_add_user_labels` | `user_label` | 唯一索引 `idx_user_label_user_id_label_id (user_id, label_id)`；普通索引 `idx_user_label_label_id` |
+| `m20260210_000000_add_content` | `content` / `content_article` / `content_video` | 索引 `idx_content_user_created (user_id, created_at)`、`idx_content_type_created (content_type, created_at)`；明细表 1:1 关联 `content.id` |
 
 > **表名注意**：`label`、`user_label` 为**单数**表名，与 `feel_sea_orm` 实体的 `#[sea_orm(table_name = ...)]` 保持一致；`users`、`user_credentials` 为复数/下划线组合。以实体 `table_name` 为准。
 
@@ -57,6 +60,9 @@ impl MigratorTrait for Migrator {
 | `user_credentials` | id / user_uid / credential_type / credential_name / encrypted_data / encryption_key / is_enabled / created_at / updated_at | 登录凭据（加密存储，`user_uid` 逻辑关联 `users.uid`） |
 | `label` | id / name / description / remark / influence / enabled / created_at / updated_at | 标签本体（公有资源，字段语义见 [features/label.md](../features/label.md)「数据模型」） |
 | `user_label` | id / user_id / label_id / enabled / created_at / updated_at | 用户×标签关联（`user_id` 关联 `users.id`，`label_id` 关联 `label.id`） |
+| `content` | id / user_id / content_type / title / enabled / is_delete / created_at / updated_at | 内容基表（公共字段），字段语义见 [features/content.md](../features/content.md) |
+| `content_article` | content_id / body | 文章明细（1:1 关联 `content.id`） |
+| `content_video` | content_id / video_url / cover_url / duration_secs | 视频明细（1:1 关联 `content.id`） |
 
 所有时间列均为 `TIMESTAMPTZ`（`timestamp_with_time_zone`）。
 
@@ -80,6 +86,6 @@ cargo run -p migration -- status  # 查看迁移状态
 
 | 项 | 状态 | 说明 |
 |----|------|------|
-| 迁移文件 | ✅ 4 个 | users / user_credentials / label / user_label |
+| 迁移文件 | ✅ 5 个 | users / user_credentials / label / user_label / content + content_article + content_video |
 | 自动执行 | ✅ | feel_api 启动时 `Migrator::up` |
 | 回滚 | ✅ | 每个迁移实现 `down()` |

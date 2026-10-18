@@ -1,12 +1,16 @@
 pub mod auth;
+pub mod content;
 pub mod label;
 pub mod model;
 pub mod user;
 
 use feel_storage::{
     cache::user::CommonUserCache,
-    database::{CommonLabelDataBase, CommonUserDataBase, LabelDataBase, UserDataBase},
-    repo::{SeaOrmLabelRepo, SeaOrmUserRepo},
+    database::{
+        CommonContentDataBase, CommonLabelDataBase, CommonUserDataBase, ContentDataBase,
+        LabelDataBase, UserDataBase,
+    },
+    repo::{SeaOrmContentRepo, SeaOrmLabelRepo, SeaOrmUserRepo},
 };
 use migration::MigratorTrait;
 use poem::Route;
@@ -33,6 +37,7 @@ impl Default for ApiConfig {
 pub struct AppState {
     pub user_database: Arc<dyn UserDataBase>,
     pub label_database: Arc<dyn LabelDataBase>,
+    pub content_database: Arc<dyn ContentDataBase>,
 }
 
 pub async fn init_app_state(config: &ApiConfig) -> AppState {
@@ -45,8 +50,9 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
         .await
         .expect("Database migration failed.");
 
-    // 存储层:user 与 label 共享同一数据库连接
+    // 存储层:user / label / content 共享同一数据库连接
     let user_repo = SeaOrmUserRepo::new(conn.clone());
+    let content_repo = SeaOrmContentRepo::new(conn.clone());
     let label_repo = SeaOrmLabelRepo::new(conn);
 
     let redis_client =
@@ -60,10 +66,12 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
         &config.jwt_secret,
     ));
     let label_database = Arc::new(CommonLabelDataBase::new(label_repo));
+    let content_database = Arc::new(CommonContentDataBase::new(content_repo));
 
     AppState {
         user_database,
         label_database,
+        content_database,
     }
 }
 
@@ -71,4 +79,5 @@ pub fn app_route() -> Route {
     Route::new()
         .nest("/users", user::router())
         .nest("/labels", label::router())
+        .nest("/content", content::router())
 }

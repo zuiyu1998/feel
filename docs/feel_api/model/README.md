@@ -17,6 +17,7 @@ cmd/feel_api/src/model/
 ├── mod.rs        # 模块声明
 ├── user.rs       # 用户 API DTO
 ├── label.rs      # 标签 API DTO
+├── content.rs    # 内容 API DTO
 └── response.rs   # 通用响应封装 ApiResponse<T>
 ```
 
@@ -29,4 +30,4 @@ cmd/feel_api/src/model/
 | 类型 | 使用领域类型（如 `DateTime<Utc>`） | 使用可序列化类型（如 `String`） |
 | 校验 | 业务不变量 | 输入格式校验 |
 
-`label.rs` 已定义标签接口的请求/响应 DTO（`LabelResponse`、`UserLabelItem` 等，提供与 `feel_entity` 的 `From` 转换），实现 HTTP 层与领域层解耦；用户接口可沿用同一模式继续迁移。
+`label.rs` / `content.rs` 已定义标签与内容接口的请求/响应 DTO（`LabelResponse`、`ContentItem` 等，提供与 `feel_entity` 的 `From` 转换），实现 HTTP 层与领域层解耦；用户接口可沿用同一模式继续迁移。

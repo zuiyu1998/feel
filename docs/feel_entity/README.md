@@ -15,10 +15,14 @@ crates/feel_entity/src/
 │   ├── mod.rs            # models 子模块重新导出
 │   └── models/
 │       └── mod.rs        # 用户相关实体（UserBase 等）
-└── label/
+├── label/
+│   ├── mod.rs            # models 子模块重新导出
+│   └── models/
+│       └── mod.rs        # 标签实体（LabelBase、UserLabel）
+└── content/
     ├── mod.rs            # models 子模块重新导出
     └── models/
-        └── mod.rs        # 标签实体（LabelBase、UserLabel）
+        └── mod.rs        # 内容实体（ContentBase、ContentKind、载荷、Create/Update/Page）
 ```
 
 ## 依赖关系
@@ -27,6 +31,7 @@ crates/feel_entity/src/
 |------|------|------|
 | `feel_core` | workspace | 通过 `feel_core::chrono` 获取时间类型 |
 | `serde` | 1.0 (derive) | `Serialize` / `Deserialize` 派生 |
+| `serde_json` | 1.0 | 内容类型载荷（`ContentKind::parse` / `to_json`）的 JSON 处理 |
 
 `feel_core` 本身只是 `chrono` 和 `tokio` 的重新导出（re-export），所以 `feel_entity` 的间接依赖链为：
 
@@ -444,6 +449,39 @@ pub struct UserLabelCreate {
 }
 ```
 
+## 模块：`content`
+
+内容相关实体定义在 `feel_entity::content` 模块下（文章 / 视频 …，类型可扩展），设计见 `docs/features/content.md`。
+
+### 模块结构
+
+```
+feel_entity::content
+  ├── CONTENT_TYPE_ARTICLE / CONTENT_TYPE_VIDEO — 内容类型标识常量
+  ├── ContentBase        — 内容公共字段（对应 content 基表）
+  ├── ContentKind        — 类型化载荷枚举（Article / Video …，扩展中心分派点）
+  ├── ArticlePayload     — 文章载荷（body）
+  ├── VideoPayload       — 视频载荷（video_url / cover_url / duration_secs）
+  ├── Content            — 组合视图（base + kind）
+  ├── ContentCreate      — 创建内容请求
+  ├── ContentUpdate      — 更新内容请求
+  └── ContentPage        — 分页结果（items + total + page + page_size）
+```
+
+### ContentKind — 类型分派点
+
+```rust
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ContentKind {
+    Article(ArticlePayload),
+    Video(VideoPayload),
+}
+```
+
+- `ContentKind::parse(content_type, payload)` — 按类型解析 JSON 载荷（新增类型在此 match 中加分支）
+- `ContentKind::to_json()` — 生成 API 响应中的 `payload` 对象
+- `match ContentKind` 必须穷尽：新增变体时漏改分派点会**编译失败**，形成类型扩展的编译期保障
+
 ## 重新导出与 Prelude
 
 ### 导出路径
@@ -461,12 +499,19 @@ pub struct UserLabelCreate {
 | `feel_entity::label::LabelCreate` | struct |
 | `feel_entity::label::LabelUpdate` | struct |
 | `feel_entity::label::UserLabelCreate` | struct |
+| `feel_entity::content::ContentBase` | struct |
+| `feel_entity::content::ContentKind` | enum |
+| `feel_entity::content::ArticlePayload` / `VideoPayload` | struct |
+| `feel_entity::content::Content` | struct |
+| `feel_entity::content::ContentCreate` / `ContentUpdate` / `ContentPage` | struct |
+| `feel_entity::content::CONTENT_TYPE_ARTICLE` / `CONTENT_TYPE_VIDEO` | const |
 
 ### Prelude
 
 ```rust
 // src/lib.rs
 pub mod prelude {
+    pub use crate::content::*;
     pub use crate::label::*;
     pub use crate::user::*;
 }
@@ -475,10 +520,11 @@ pub mod prelude {
 使用方式：
 
 ```rust
-use feel_entity::prelude::*;   // 导入所有实体（user + label）
+use feel_entity::prelude::*;   // 导入所有实体（user + label + content）
 // 等价于：
 use feel_entity::user::{UserBase, UserRegister, UserLogin, LoginResult, UserUpdate, UserCredential};
 use feel_entity::label::{LabelBase, LabelCreate, LabelUpdate, UserLabel, UserLabelCreate};
+use feel_entity::content::{ContentBase, ContentKind, Content, ContentCreate, ContentUpdate, ContentPage};
 ```
 
 ## 类型关系图

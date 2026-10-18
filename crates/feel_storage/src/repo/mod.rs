@@ -1,6 +1,8 @@
+mod content;
 mod label;
 mod user;
 
+pub use content::*;
 pub use label::*;
 pub use user::*;
 
@@ -60,4 +62,36 @@ pub trait LabelRepo: 'static + Send + Sync {
 
     /// 按 用户 + 标签 解除关联
     async fn delete_user_label_by_ids(&self, user_id: i64, label_id: i64) -> Result<()>;
+}
+
+#[async_trait]
+pub trait ContentRepo: 'static + Send + Sync {
+    /// 创建内容（基表 + 类型明细，同一事务）
+    async fn create(&self, create: &ContentCreate) -> Result<Content>;
+
+    /// 按 ID 查找内容（含类型明细；明细缺失时返回 None）
+    async fn find_by_id(&self, content_id: i64) -> Result<Option<Content>>;
+
+    /// 分页查询某用户的公开内容（enabled 且未删除，按创建时间倒序）
+    async fn find_by_user(&self, user_id: i64, offset: u64, limit: u64) -> Result<Vec<Content>>;
+
+    /// 统计某用户的公开内容数量
+    async fn count_by_user(&self, user_id: i64) -> Result<u64>;
+
+    /// 分页查询全站内容流（enabled 且未删除，可按 content_type 过滤）
+    async fn find_feed(
+        &self,
+        content_type: Option<&str>,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<Content>>;
+
+    /// 统计全站内容流数量
+    async fn count_feed(&self, content_type: Option<&str>) -> Result<u64>;
+
+    /// 更新内容（标题/载荷；类型明细 upsert）
+    async fn update(&self, update: &ContentUpdate) -> Result<Content>;
+
+    /// 软删除内容（仅作者）
+    async fn soft_delete(&self, content_id: i64, user_id: i64) -> Result<()>;
 }

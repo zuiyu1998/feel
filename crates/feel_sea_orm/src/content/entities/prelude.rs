@@ -1,0 +1,12 @@
+pub use super::content::ActiveModel as ContentActiveModel;
+pub use super::content::Column as ContentColumn;
+pub use super::content::Entity as ContentEntity;
+pub use super::content::Model as ContentModel;
+pub use super::content_article::ActiveModel as ContentArticleActiveModel;
+pub use super::content_article::Column as ContentArticleColumn;
+pub use super::content_article::Entity as ContentArticleEntity;
+pub use super::content_article::Model as ContentArticleModel;
+pub use super::content_video::ActiveModel as ContentVideoActiveModel;
+pub use super::content_video::Column as ContentVideoColumn;
+pub use super::content_video::Entity as ContentVideoEntity;
+pub use super::content_video::Model as ContentVideoModel;

@@ -841,6 +841,7 @@ version = "0.1.0"
 dependencies = [
  "feel_core",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
