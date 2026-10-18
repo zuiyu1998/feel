@@ -16,7 +16,7 @@
 | POST | `/api/v1/content/create` | ✅ Bearer | `create_content` | 创建内容（文章/视频） |
 | GET | `/api/v1/content/info` | ❌ | `content_info` | 查看内容详情 |
 | GET | `/api/v1/content/list` | ❌ | `list_content` | 某用户的内容列表（分页） |
-| GET | `/api/v1/content/feed` | ❌ | `content_feed` | 全站内容流（分页，可按类型过滤） |
+| GET | `/api/v1/content/feed` | ❌ | `content_feed` | 全站 Feed 流（分页，可按类型过滤，`sort=latest/popular`） |
 | PUT | `/api/v1/content/update` | ✅ Bearer | `update_content` | 更新标题/载荷（仅作者） |
 | DELETE | `/api/v1/content/remove` | ✅ Bearer | `remove_content` | 软删除（仅作者） |
 
@@ -58,9 +58,11 @@
         "content_type": "article",
         "title": "Rust 异步生态入门",
         "enabled": true,
+        "view_count": 0,
         "created_at": "2026-02-10T00:00:00Z",
         "updated_at": "2026-02-10T00:00:00Z",
-        "payload": { "body": "# 标题\nMarkdown 正文……" }
+        "payload": { "body": "# 标题\nMarkdown 正文……" },
+        "author": { "user_id": 42, "name": "张三", "avatar": "https://example.com/avatar.png" }
     }
 }
 ```
@@ -73,7 +75,7 @@
 { "content_id": 1 }
 ```
 
-**响应：** `ApiResponse<ContentItem>`（同上面的 data）。
+**响应：** `ApiResponse<ContentItem>`（同上面的 data；成功返回时内容 `view_count` 递增，best-effort）。
 
 ## GET `/api/v1/content/list` — 某用户的内容列表
 
@@ -90,7 +92,7 @@
     "code": 0,
     "message": "ok",
     "data": {
-        "items": [ { "id": 1, "content_type": "article", "title": "…", "payload": { "body": "…" }, "…": "…" } ],
+        "items": [ { "id": 1, "content_type": "article", "title": "…", "view_count": 12, "author": { "user_id": 42, "name": "张三", "avatar": "…" }, "payload": { "body": "…" }, "…": "…" } ],
         "total": 57,
         "page": 1,
         "page_size": 20
@@ -98,15 +100,23 @@
 }
 ```
 
-## GET `/api/v1/content/feed` — 全站内容流
+## GET `/api/v1/content/feed` — 全站 Feed 流
 
 **请求：**
 
 ```json
-{ "content_type": "article", "page": 1, "page_size": 20 }
+{ "content_type": "article", "sort": "popular", "page": 1, "page_size": 20 }
 ```
 
-**响应：** `ApiResponse<ContentPageResponse>`（同 list）。
+| 字段 | 说明 |
+|------|------|
+| `content_type` | 可选，`"article"` / `"video"` 过滤 |
+| `sort` | 可选，`"latest"`（默认）最新 / `"popular"` 热门（按 `view_count`） |
+| `page` / `page_size` | 分页（默认 20，上限 50） |
+
+**响应：** `ApiResponse<ContentPageResponse>`（同 list；卡片含 `author` 与 `view_count`）。
+
+> feed 分页带 Redis 缓存（Cache-Aside，TTL 60s）：重复请求直接命中；create/update/remove 后旧缓存以版本号失效。
 
 ## PUT `/api/v1/content/update` — 更新内容（仅作者）
 
@@ -139,6 +149,7 @@
 | `payload`（video） | `video_url` 必填且 `http(s)://` 开头；`cover_url` 可选，同前缀要求；`duration_secs` ≥ 0 |
 | 归属校验 | update / remove 仅允许作者本人操作 |
 | 可见性 | 软删除内容视为不存在（`10004`）；列表只返回 `enabled` 且未删除内容 |
+| feed `sort` | 仅 `latest` / `popular`，非法值返回 `10006` |
 
 ## 错误映射
 
@@ -164,4 +175,4 @@ Route::new()
 | `feel_entity::content` | 领域模型（`ContentBase`、`ContentKind`、载荷、分页） |
 | `feel_storage` | `ContentDataBase` / `ContentRepo` 及其实现 |
 | `feel_sea_orm::content` | `content` / `content_article` / `content_video` ORM 实体 |
-| `migration` | `m20260210_000000_add_content` 建表迁移 |
+| `migration` | `m20260210_000000_add_content` 建表、`m20260211_000000_add_content_view_count`（浏览量） |

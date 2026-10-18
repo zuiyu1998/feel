@@ -465,7 +465,8 @@ feel_entity::content
   ├── Content            — 组合视图（base + kind）
   ├── ContentCreate      — 创建内容请求
   ├── ContentUpdate      — 更新内容请求
-  └── ContentPage        — 分页结果（items + total + page + page_size）
+  ├── ContentPage        — 分页结果（items + total + page + page_size）
+  └── FeedSort           — Feed 排序枚举（Latest 最新 / Popular 热门）
 ```
 
 ### ContentKind — 类型分派点

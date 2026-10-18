@@ -78,13 +78,17 @@ pub trait ContentRepo: 'static + Send + Sync {
     /// 统计某用户的公开内容数量
     async fn count_by_user(&self, user_id: i64) -> Result<u64>;
 
-    /// 分页查询全站内容流（enabled 且未删除，可按 content_type 过滤）
+    /// 分页查询全站内容流（enabled 且未删除，可按 content_type 过滤、按热度/时间排序）
     async fn find_feed(
         &self,
         content_type: Option<&str>,
+        sort: FeedSort,
         offset: u64,
         limit: u64,
     ) -> Result<Vec<Content>>;
+
+    /// 原子增加内容浏览量；返回更新行数（内容不存在/已删除时为 0）
+    async fn increment_view_count(&self, content_id: i64) -> Result<u64>;
 
     /// 统计全站内容流数量
     async fn count_feed(&self, content_type: Option<&str>) -> Result<u64>;

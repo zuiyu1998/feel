@@ -132,8 +132,8 @@ impl From<LabelBase> for UserLabelItem {
     }
 }
 
-/// 用户摘要（内嵌于"查看标签下的用户"列表项）
-#[derive(Debug, Serialize)]
+/// 用户摘要（内嵌于"查看标签下的用户"列表项 / 内容 Feed 卡片）
+#[derive(Debug, Clone, Serialize)]
 pub struct UserBrief {
     pub user_id: i64,
     pub name: String,

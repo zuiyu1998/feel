@@ -99,6 +99,7 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 |------|------|
 | [feel_storage/ContentRepo.md](feel_storage/ContentRepo.md) | `ContentRepo` trait：内容持久化接口（基表 + 类型明细，类型分派点） |
 | [feel_storage/ContentDataBase.md](feel_storage/ContentDataBase.md) | `ContentDataBase` trait + `CommonContentDataBase`：业务校验与分页归一化 |
+| [feel_storage/ContentCache.md](feel_storage/ContentCache.md) | `ContentCache` trait + `CommonContentCache`：feed 分页 Redis 缓存（Cache-Aside + 版本号失效） |
 
 **错误与工具**
 
@@ -154,6 +155,8 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | `docs/feel_storage/ContentDataBase.md` | ✅ | 内容数据访问接口与默认实现 |
 | `docs/feel_sea_orm/ContentEntity.md` / `ContentArticleEntity.md` / `ContentVideoEntity.md` | ✅ | 内容基表与文章/视频明细表 ORM 实体 |
 | 内容系统代码落地 | ✅ | Phase 1：migration + feel_entity/feel_sea_orm/feel_storage/feel_api 全链路，`cargo check --workspace` 通过 |
+| Feed 流增强 | ✅ | `view_count` 统计（migration `m20260211`）+ `latest`/`popular` 排序 + 列表卡片内嵌 `author` 摘要 |
+| Feed 缓存 | ✅ | `ContentCache` / `CommonContentCache`：feed 分页 Cache-Aside（TTL 60s + 版本号失效），写操作自动失效 |
 | 根 `README.md` | ✅ | 仓库入口：架构速览、快速开始、文档导航 |
 | 既有文档刷新 | ✅ | `feel_api/README.md`（模块树/AppState）、`feel_api/model/README.md`、`UserEntity.md`（主键说明）、`features/label.md`（接口路径与 JSON）对齐当前实现 |
 

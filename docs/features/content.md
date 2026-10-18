@@ -13,7 +13,7 @@
 3. **归属与权限** — 内容归属作者（`user_id` 关联 `users.id`），写操作仅作者本人可执行，认证复用现有 JWT 中间件
 4. **软删除** — `is_delete` 标记删除，历史可追溯（与 `users` 表的先例一致）
 5. **统一出口** — 所有类型对外统一返回 `ContentItem`（基表字段 + `payload` 对象），客户端按 `content_type` 解析
-6. **可分页的内容流** — 支撑全站 feed 与用户主页列表
+6. **可分页的 Feed 流** — 支撑全站 feed（最新/热门排序）与用户主页列表，列表项内嵌作者摘要
 
 ## 建模选型
 
@@ -39,6 +39,7 @@ pub struct ContentBase {
     pub title: String,
     pub enabled: bool,         // 可见性/管理开关
     pub is_delete: bool,       // 软删除标记
+    pub view_count: i64,       // 浏览量（Feed 热度排序依据）
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -81,6 +82,12 @@ pub struct ContentUpdate {
     pub title: Option<String>,
     pub payload: Option<serde_json::Value>,
 }
+
+/// Feed 流排序方式
+pub enum FeedSort {
+    Latest,   // 最新（默认，按 createdAt 倒序）
+    Popular,  // 热门（按 viewCount 倒序，同浏览量按 createdAt 倒序）
+}
 ```
 
 - `payload` 用 `serde_json::Value` 承载类型专属字段：API 层按 `content_type` 反序列化为具体 `ArticlePayload` / `VideoPayload` 校验后再写入明细表
@@ -98,6 +105,7 @@ pub struct ContentUpdate {
 | `title` | `VARCHAR` | NOT NULL | 标题 |
 | `enabled` | `BOOLEAN` | NOT NULL DEFAULT true | 是否可见/启用 |
 | `is_delete` | `BOOLEAN` | NOT NULL DEFAULT false | 软删除标记 |
+| `view_count` | `BIGINT` | NOT NULL DEFAULT 0 | 浏览量（Feed 热度排序依据） |
 | `created_at` | `TIMESTAMPTZ` | NOT NULL | 创建时间 |
 | `updated_at` | `TIMESTAMPTZ` | NOT NULL | 更新时间 |
 
@@ -106,6 +114,8 @@ pub struct ContentUpdate {
 ```sql
 CREATE INDEX idx_content_user_created   ON content (user_id, created_at);
 CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
+-- 浏览量（feed 热度），由 m20260211_000000_add_content_view_count 追加
+CREATE INDEX idx_content_view_created   ON content (view_count, created_at);
 ```
 
 ### 表 `content_article`（文章明细，1:1）
@@ -142,7 +152,7 @@ CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
    | `cover_url` | 可选，`http(s)://` 开头 |
    | `duration_secs` | ≥ 0 |
 
-6. **分页** — `page` 从 1 开始；`page_size` 默认 20、上限 50；列表按 `created_at` 倒序
+6. **分页** — `page` 从 1 开始；`page_size` 默认 20、上限 50；列表按 `created_at` 倒序（热门流按 `view_count` 倒序）
 
 ## API 设计
 
@@ -153,7 +163,7 @@ CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
 | POST | `/api/v1/content/create` | ✅ Bearer | 创建内容（文章/视频） |
 | GET  | `/api/v1/content/info` | ❌ | 查看内容详情 |
 | GET  | `/api/v1/content/list` | ❌ | 某用户的内容列表（分页） |
-| GET  | `/api/v1/content/feed` | ❌ | 全站内容流（分页，可按类型过滤） |
+| GET  | `/api/v1/content/feed` | ❌ | 全站 Feed 流（分页，可按类型过滤，`sort=latest/popular`） |
 | PUT  | `/api/v1/content/update` | ✅ Bearer | 更新标题/正文（仅作者） |
 | DELETE | `/api/v1/content/remove` | ✅ Bearer | 软删除（仅作者） |
 
@@ -187,9 +197,11 @@ CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
         "content_type": "article",
         "title": "Rust 异步生态入门",
         "enabled": true,
+        "view_count": 0,
         "created_at": "2026-02-10T00:00:00Z",
         "updated_at": "2026-02-10T00:00:00Z",
-        "payload": { "body": "# 标题\nMarkdown 正文……" }
+        "payload": { "body": "# 标题\nMarkdown 正文……" },
+        "author": { "user_id": 42, "name": "张三", "avatar": "https://example.com/avatar.png" }
     }
 }
 ```
@@ -200,8 +212,8 @@ CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
 // GET /api/v1/content/list
 { "user_id": 42, "page": 1, "page_size": 20 }
 
-// GET /api/v1/content/feed
-{ "content_type": "article", "page": 1, "page_size": 20 }
+// GET /api/v1/content/feed（sort: "latest" 最新 | "popular" 热门，默认 latest）
+{ "content_type": "article", "sort": "popular", "page": 1, "page_size": 20 }
 ```
 
 响应（`ApiResponse<ContentPageResponse>`）：
@@ -211,13 +223,24 @@ CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
     "code": 0,
     "message": "ok",
     "data": {
-        "items": [ { "id": 1, "content_type": "article", "title": "…", "payload": { "body": "…" }, "…": "…" } ],
+        "items": [ { "id": 1, "content_type": "article", "title": "…", "view_count": 12, "author": { "user_id": 42, "name": "张三", "avatar": "…" }, "payload": { "body": "…" }, "…": "…" } ],
         "total": 57,
         "page": 1,
         "page_size": 20
     }
 }
 ```
+
+## Feed 流
+
+Feed 流是全站内容的聚合时间线（用户主页列表 `list` 使用同一卡片结构）。
+
+- **排序**：`sort=latest`（默认，按 `created_at` 倒序）/ `sort=popular`（按 `view_count` 倒序，同浏览量按 `created_at` 倒序）
+- **卡片**：列表项内嵌 `author`（`user_id/name/avatar`）与 `view_count`，客户端无需二次查询
+- **浏览量统计**：`GET /content/info` 成功返回时对内容执行一次 `view_count + 1`（best-effort，失败不影响详情返回）——热门排序的数据来源
+- **分页**：`page/page_size`（默认 20，上限 50）；feed 滚动按 `page` 递增请求（未来可升级为游标分页）
+- **过滤**：`content_type` 可选（article / video）
+- **缓存**：feed 分页经 Redis 缓存（Cache-Aside，TTL 60s）；内容写操作（create/update/remove）以版本号（`INCR`）失效全部旧缓存；浏览量变化由 TTL 自然收敛（见 `docs/feel_storage/ContentCache.md`）
 
 ## 扩展机制：新增内容类型（示例：加入"播客"）
 
@@ -256,13 +279,15 @@ CREATE INDEX idx_content_type_created   ON content (content_type, created_at);
 5. ✅ `feel_api`：DTO + 6 个接口 + `AppState` 注入 + 路由挂载
 6. ✅ 文档：本页 + `docs/feel_api/content.md` + 各层模块文档 + 总目录更新（`cargo check --workspace` 通过）
 
+> **Phase 1.5 — Feed 流增强** ✅ 已实现：`view_count` 统计（迁移 `m20260211_000000_add_content_view_count`）、`latest` / `popular` 排序、列表卡片内嵌作者摘要（`author`）、Redis 分页缓存（`ContentCache`：Cache-Aside + 版本号失效 + 60s TTL）。
+
 **Phase 2 — 增强**
 
 - 草稿/发布状态（`status` 列或独立草稿表）、可见范围（公开/粉丝/私密）
 - 内容审核（管理员 `enabled` 开关 + 审核队列）
 - 对象存储直传（预签名上传 URL）+ 视频转码异步任务
 - 搜索（`title` 的 tsvector 索引；正文全文检索）
-- feed 缓存（`content_type + created_at` 排序键的 Redis 分页缓存）
+- feed 缓存 ✅ 已实现（Cache-Aside + 版本号失效 + 60s TTL，见「Feed 流」与 `docs/feel_storage/ContentCache.md`）
 
 **Phase 3 — 生态**
 

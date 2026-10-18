@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::{Error, Result, repo::ContentRepo};
+use crate::{Error, Result, cache::content::ContentCache, repo::ContentRepo};
 use feel_entity::prelude::*;
 
 /// 列表分页默认页大小。
@@ -14,12 +14,14 @@ const MAX_ARTICLE_BODY_CHARS: usize = 100_000;
 
 pub struct CommonContentDataBase {
     content_repo: Box<dyn ContentRepo>,
+    content_cache: Box<dyn ContentCache>,
 }
 
 impl CommonContentDataBase {
-    pub fn new<T: ContentRepo>(content_repo: T) -> Self {
+    pub fn new<T: ContentRepo, C: ContentCache>(content_repo: T, content_cache: C) -> Self {
         CommonContentDataBase {
             content_repo: Box::new(content_repo),
+            content_cache: Box::new(content_cache),
         }
     }
 
@@ -89,7 +91,7 @@ impl CommonContentDataBase {
 
 #[async_trait]
 pub trait ContentDataBase: 'static + Send + Sync {
-    /// 创建内容（标题/载荷校验后落库）
+    /// 创建内容（标题/载荷校验后落库，成功后失效 feed 缓存）
     async fn create(&self, create: &ContentCreate) -> Result<Content>;
 
     /// 按 ID 获取内容（已软删除的视为不存在）
@@ -103,18 +105,22 @@ pub trait ContentDataBase: 'static + Send + Sync {
         page_size: Option<u64>,
     ) -> Result<ContentPage>;
 
-    /// 分页查询全站内容流（enabled 且未删除，可按 content_type 过滤）
+    /// 分页查询全站内容流（enabled 且未删除，可按 content_type 过滤、按热度/时间排序；带 Redis 分页缓存）
     async fn list_feed(
         &self,
         content_type: Option<&str>,
+        sort: FeedSort,
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<ContentPage>;
 
-    /// 更新内容标题/载荷（仅作者，归属校验由本层完成）
+    /// 记录一次内容浏览（`view_count` 原子 +1；内容不存在/已删除时静默忽略）
+    async fn record_view(&self, content_id: i64) -> Result<()>;
+
+    /// 更新内容标题/载荷（仅作者，归属校验由本层完成；成功后失效 feed 缓存）
     async fn update(&self, update: &ContentUpdate) -> Result<Content>;
 
-    /// 软删除内容（仅作者）
+    /// 软删除内容（仅作者；成功后失效 feed 缓存）
     async fn remove(&self, content_id: i64, user_id: i64) -> Result<()>;
 }
 
@@ -130,7 +136,11 @@ impl ContentDataBase for CommonContentDataBase {
             title,
             payload: create.payload.clone(),
         };
-        self.content_repo.create(&create).await
+        let content = self.content_repo.create(&create).await?;
+
+        // 内容写操作成功后失效 feed 缓存（失败仅降级：旧缓存按 TTL 自然过期）
+        let _ = self.content_cache.invalidate_feed().await;
+        Ok(content)
     }
 
     async fn get(&self, content_id: i64) -> Result<Option<Content>> {
@@ -164,21 +174,48 @@ impl ContentDataBase for CommonContentDataBase {
     async fn list_feed(
         &self,
         content_type: Option<&str>,
+        sort: FeedSort,
         page: Option<u64>,
         page_size: Option<u64>,
     ) -> Result<ContentPage> {
         let (offset, page, page_size) = Self::paginate(page, page_size);
+
+        // 1. 缓存命中直接返回；缓存异常时降级回源
+        match self
+            .content_cache
+            .get_feed(content_type, sort, page, page_size)
+            .await
+        {
+            Ok(Some(cached)) => return Ok(cached),
+            Ok(None) | Err(_) => {}
+        }
+
+        // 2. 回源查询
         let items = self
             .content_repo
-            .find_feed(content_type, offset, page_size)
+            .find_feed(content_type, sort, offset, page_size)
             .await?;
         let total = self.content_repo.count_feed(content_type).await?;
-        Ok(ContentPage {
+        let content_page = ContentPage {
             items,
             total,
             page,
             page_size,
-        })
+        };
+
+        // 3. 回填缓存（best-effort：失败不影响本次返回）
+        let _ = self
+            .content_cache
+            .set_feed(content_type, sort, page, page_size, &content_page)
+            .await;
+
+        Ok(content_page)
+    }
+
+    async fn record_view(&self, content_id: i64) -> Result<()> {
+        // 浏览量变化只影响热度排序；由 feed 缓存 TTL（60s）自然收敛，不主动失效以避免高频写放大
+        self.content_repo.increment_view_count(content_id).await?;
+        Ok(())
     }
 
     async fn update(&self, update: &ContentUpdate) -> Result<Content> {
@@ -207,7 +244,11 @@ impl ContentDataBase for CommonContentDataBase {
             return Err(Error::Business("Nothing to update".into()));
         }
 
-        self.content_repo.update(&normalized).await
+        let content = self.content_repo.update(&normalized).await?;
+
+        // 内容写操作成功后失效 feed 缓存
+        let _ = self.content_cache.invalidate_feed().await;
+        Ok(content)
     }
 
     async fn remove(&self, content_id: i64, user_id: i64) -> Result<()> {
@@ -225,6 +266,10 @@ impl ContentDataBase for CommonContentDataBase {
             )));
         }
 
-        self.content_repo.soft_delete(content_id, user_id).await
+        self.content_repo.soft_delete(content_id, user_id).await?;
+
+        // 内容写操作成功后失效 feed 缓存
+        let _ = self.content_cache.invalidate_feed().await;
+        Ok(())
     }
 }

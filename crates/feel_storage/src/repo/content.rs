@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use chrono::Local;
 use feel_entity::content::{
     ArticlePayload, CONTENT_TYPE_ARTICLE, CONTENT_TYPE_VIDEO, Content, ContentBase, ContentCreate,
-    ContentKind, ContentUpdate, VideoPayload,
+    ContentKind, ContentUpdate, FeedSort, VideoPayload,
 };
 use feel_sea_orm::content::entities::prelude::*;
 use sea_orm::{
@@ -11,6 +11,7 @@ use sea_orm::{
     ActiveValue::{NotSet, Set},
     ColumnTrait, DatabaseConnection, EntityTrait, IntoActiveModel, PaginatorTrait, QueryFilter,
     QueryOrder, QuerySelect, TransactionTrait,
+    sea_query::Expr,
 };
 use std::collections::HashMap;
 
@@ -109,6 +110,7 @@ impl ContentRepo for SeaOrmContentRepo {
             title: Set(create.title.clone()),
             enabled: Set(true),
             is_delete: Set(false),
+            view_count: Set(0),
             created_at: Set(now.to_utc()),
             updated_at: Set(now.to_utc()),
         };
@@ -185,6 +187,7 @@ impl ContentRepo for SeaOrmContentRepo {
     async fn find_feed(
         &self,
         content_type: Option<&str>,
+        sort: FeedSort,
         offset: u64,
         limit: u64,
     ) -> Result<Vec<Content>> {
@@ -195,8 +198,14 @@ impl ContentRepo for SeaOrmContentRepo {
             query = query.filter(ContentColumn::ContentType.eq(content_type));
         }
 
+        query = match sort {
+            FeedSort::Latest => query.order_by_desc(ContentColumn::CreatedAt),
+            FeedSort::Popular => query
+                .order_by_desc(ContentColumn::ViewCount)
+                .order_by_desc(ContentColumn::CreatedAt),
+        };
+
         let bases = query
-            .order_by_desc(ContentColumn::CreatedAt)
             .offset(offset)
             .limit(limit)
             .all(&self.conn)
@@ -310,5 +319,18 @@ impl ContentRepo for SeaOrmContentRepo {
         active.updated_at = Set(Local::now().to_utc());
         active.update(&self.conn).await?;
         Ok(())
+    }
+
+    async fn increment_view_count(&self, content_id: i64) -> Result<u64> {
+        let result = ContentEntity::update_many()
+            .col_expr(
+                ContentColumn::ViewCount,
+                Expr::col(ContentColumn::ViewCount).add(1),
+            )
+            .filter(ContentColumn::Id.eq(content_id))
+            .filter(ContentColumn::IsDelete.eq(false))
+            .exec(&self.conn)
+            .await?;
+        Ok(result.rows_affected)
     }
 }

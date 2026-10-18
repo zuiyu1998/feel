@@ -32,9 +32,10 @@ pub trait ContentDataBase: 'static + Send + Sync {
 |------|------|
 | `create` | 校验标题/载荷 → 委托 `ContentRepo::create` |
 | `get` | 查内容；已软删除的返回 `None`（对 API 表现为 404） |
-| `list_by_user` / `list_feed` | 分页归一化（默认 20 条/页，最大 50）后委托 Repo |
+| `list_by_user` / `list_feed` | 分页归一化（默认 20 条/页，最大 50）后委托 Repo；feed 支持 `sort`（latest/popular） |
 | `update` | 归属校验（仅作者）→ 标题/载荷校验 → 委托 Repo |
 | `remove` | 归属校验 → 委托 Repo 软删除 |
+| `record_view` | 浏览量 +1（委托 `increment_view_count`，best-effort） |
 
 ## 业务校验规则
 
@@ -55,15 +56,18 @@ pub trait ContentDataBase: 'static + Send + Sync {
 ```rust
 pub struct CommonContentDataBase {
     content_repo: Box<dyn ContentRepo>,
+    content_cache: Box<dyn ContentCache>,
 }
 
 impl CommonContentDataBase {
-    pub fn new<T: ContentRepo>(content_repo: T) -> Self { /* ... */ }
+    pub fn new<T: ContentRepo, C: ContentCache>(content_repo: T, content_cache: C) -> Self { /* ... */ }
 }
 ```
 
-- 构造时注入任意 `ContentRepo` 实现（当前为 `SeaOrmContentRepo`）
+- 构造时注入任意 `ContentRepo`（当前 `SeaOrmContentRepo`）与 `ContentCache`（当前 `CommonContentCache`）实现
 - `paginate()`：把可选 `page/page_size` 归一化为 `(offset, page, page_size)`
+- `list_feed()`：Cache-Aside —— 先查 `ContentCache`，未命中回源并把结果写回缓存（TTL 60s；缓存异常时降级回源）
+- create / update / remove 成功后调用 `invalidate_feed()`（INCR 版本号，O(1) 失效全部旧缓存）
 - 业务异常统一以 `crate::Error::Business(...)` 返回，API 层映射为状态码 `10006`
 
 ## 架构关系
@@ -72,18 +76,20 @@ impl CommonContentDataBase {
 Handler（feel_api::content）
     ↓
 ContentDataBase（业务校验 + 分页）
+    ↓ 缓存命中直接返回 / 未命中回源并回填
+CommonContentDataBase ──► ContentCache（CommonContentCache → Redis）
     ↓ 委托
-CommonContentDataBase ──► ContentRepo（SeaOrmContentRepo）
-    ↓
-content / content_article / content_video
+ContentRepo（SeaOrmContentRepo）→ content / content_article / content_video
 ```
 
 ## 使用示例
 
 ```rust
+use feel_storage::cache::content::CommonContentCache;
 use feel_storage::database::{CommonContentDataBase, ContentDataBase};
 
-let db = CommonContentDataBase::new(SeaOrmContentRepo::new(conn));
+let cache = CommonContentCache::new(redis_client);
+let db = CommonContentDataBase::new(SeaOrmContentRepo::new(conn), cache);
 let page = db.list_by_user(42, Some(1), Some(20)).await?;
 ```
 
@@ -95,3 +101,5 @@ let page = db.list_by_user(42, Some(1), Some(20)).await?;
 | 归属校验 | ✅ | update / remove 仅作者 |
 | 分页归一化 | ✅ | 默认 20 / 上限 50 |
 | 与 ContentRepo 委托 | ✅ | 全部委托 |
+| Feed 排序 / 浏览量 | ✅ | `FeedSort` 透传 + `record_view` |
+| Feed 缓存 | ✅ | Cache-Aside（`ContentCache`）+ 版本号失效 + 60s TTL |

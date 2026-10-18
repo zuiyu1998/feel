@@ -43,7 +43,17 @@ pub struct ListContentRequest {
 
 ### FeedContentRequest
 
-全站内容流请求体（`GET /content/feed`）：`content_type: Option<String>` + 分页参数。
+全站 Feed 流请求体（`GET /content/feed`）：
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct FeedContentRequest {
+    pub content_type: Option<String>,  // 可选类型过滤（article / video）
+    pub sort: Option<String>,          // "latest"（默认） | "popular"
+    pub page: Option<u64>,
+    pub page_size: Option<u64>,
+}
+```
 
 ### UpdateContentRequest
 
@@ -57,7 +67,7 @@ pub struct ListContentRequest {
 
 ### ContentItem
 
-内容列表项 / 详情（所有类型统一结构：基表字段 + `payload` 对象）。
+内容列表项 / 详情 / Feed 卡片（基表字段 + `payload` 对象 + 作者摘要）。
 
 ```rust
 #[derive(Debug, Serialize)]
@@ -67,12 +77,15 @@ pub struct ContentItem {
     pub content_type: String,
     pub title: String,
     pub enabled: bool,
+    pub view_count: i64,        // 浏览量（feed 热度）
     pub created_at: String,     // RFC3339
     pub updated_at: String,     // RFC3339
     pub payload: Value,         // 类型专属字段（由 ContentKind::to_json 生成）
+    pub author: UserBrief,      // 作者摘要（user_id / name / avatar）
 }
 
-impl From<Content> for ContentItem { /* 字段映射 */ }
+/// 领域内容 + 作者摘要 → API 列表项
+pub fn content_item(content: Content, author: UserBrief) -> ContentItem
 ```
 
 ### ContentPageResponse
@@ -90,11 +103,14 @@ pub struct ContentPageResponse {
 impl From<ContentPage> for ContentPageResponse { /* 字段映射 */ }
 ```
 
+> 实际由 `ContentPageResponse::with_items(items, &page)` 构造（先补齐作者摘要再组装）。
+
 ## 与领域模型的对应关系
 
 | DTO | 领域模型 | 转换方式 |
 |-----|----------|----------|
-| `ContentItem` | `feel_entity::content::Content` | `From<Content>`（`kind.to_json()` 生成 payload） |
-| `ContentPageResponse` | `feel_entity::content::ContentPage` | `From<ContentPage>` |
+| `ContentItem` | `feel_entity::content::Content` | `content_item(content, author)`（`kind.to_json()` + 作者摘要） |
+| `ContentPageResponse` | `feel_entity::content::ContentPage` | `with_items(items, &page)` |
 | `CreateContentRequest` | `feel_entity::content::ContentCreate` | handler 内字段组装 |
 | `UpdateContentRequest` | `feel_entity::content::ContentUpdate` | handler 内字段组装 |
+| `FeedContentRequest` | `feel_entity::content::FeedSort` | `sort` 由 `FeedSort::parse` 解析（latest/popular） |

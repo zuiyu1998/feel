@@ -22,6 +22,8 @@ pub struct ContentBase {
     pub enabled: bool,
     /// 软删除标记
     pub is_delete: bool,
+    /// 浏览量（feed 热度排序依据，访问详情时递增）
+    pub view_count: i64,
     /// Record creation time
     pub created_at: DateTime<Utc>,
     /// Last update time
@@ -134,4 +136,26 @@ pub struct ContentPage {
     pub total: u64,
     pub page: u64,
     pub page_size: u64,
+}
+
+/// Feed 流排序方式。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FeedSort {
+    /// 最新（按创建时间倒序，默认）
+    Latest,
+    /// 热门（按浏览量倒序，同浏览量按创建时间倒序）
+    Popular,
+}
+
+impl FeedSort {
+    /// 解析 API 传入的排序标识（"latest" | "popular"）。
+    pub fn parse(sort: &str) -> Result<FeedSort, String> {
+        match sort {
+            "latest" => Ok(FeedSort::Latest),
+            "popular" => Ok(FeedSort::Popular),
+            other => Err(format!(
+                "Unsupported feed sort '{other}', expected 'latest' or 'popular'"
+            )),
+        }
+    }
 }

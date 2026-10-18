@@ -5,7 +5,7 @@ pub mod model;
 pub mod user;
 
 use feel_storage::{
-    cache::user::CommonUserCache,
+    cache::{content::CommonContentCache, user::CommonUserCache},
     database::{
         CommonContentDataBase, CommonLabelDataBase, CommonUserDataBase, ContentDataBase,
         LabelDataBase, UserDataBase,
@@ -57,7 +57,8 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
 
     let redis_client =
         redis::Client::open(&*config.redis_url).expect("Redis client create failed.");
-    let user_cache = Box::new(CommonUserCache::new(redis_client));
+    let user_cache = Box::new(CommonUserCache::new(redis_client.clone()));
+    let content_cache = CommonContentCache::new(redis_client);
 
     // 数据访问层
     let user_database = Arc::new(CommonUserDataBase::new(
@@ -66,7 +67,7 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
         &config.jwt_secret,
     ));
     let label_database = Arc::new(CommonLabelDataBase::new(label_repo));
-    let content_database = Arc::new(CommonContentDataBase::new(content_repo));
+    let content_database = Arc::new(CommonContentDataBase::new(content_repo, content_cache));
 
     AppState {
         user_database,

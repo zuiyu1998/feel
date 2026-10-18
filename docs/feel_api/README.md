@@ -114,7 +114,7 @@ pub struct AppState {
 | POST | `/api/v1/content/create`            | `create_content` | 创建内容（文章/视频） | ✅ Bearer | ✅ 已实现 |
 | GET  | `/api/v1/content/info`              | `content_info` | 查看内容详情 | ❌ | ✅ 已实现 |
 | GET  | `/api/v1/content/list`              | `list_content` | 某用户的内容列表 | ❌ | ✅ 已实现 |
-| GET  | `/api/v1/content/feed`              | `content_feed` | 全站内容流 | ❌ | ✅ 已实现 |
+| GET  | `/api/v1/content/feed`              | `content_feed` | 全站 Feed 流（latest/popular） | ❌ | ✅ 已实现 |
 | PUT  | `/api/v1/content/update`            | `update_content` | 更新内容 | ✅ Bearer | ✅ 已实现 |
 | DELETE | `/api/v1/content/remove`          | `remove_content` | 软删除内容 | ✅ Bearer | ✅ 已实现 |
 
