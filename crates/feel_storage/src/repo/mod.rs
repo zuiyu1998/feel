@@ -1,8 +1,10 @@
 mod content;
+mod follow;
 mod label;
 mod user;
 
 pub use content::*;
+pub use follow::*;
 pub use label::*;
 pub use user::*;
 
@@ -98,4 +100,42 @@ pub trait ContentRepo: 'static + Send + Sync {
 
     /// 软删除内容（仅作者）
     async fn soft_delete(&self, content_id: i64, user_id: i64) -> Result<()>;
+}
+
+#[async_trait]
+pub trait UserFollowRepo: 'static + Send + Sync {
+    /// 创建关注关系（follower -> followee）
+    async fn create_user_follow(&self, create: &UserFollowCreate) -> Result<UserFollow>;
+
+    /// 查询关注关系（follower 是否关注 followee）
+    async fn find_user_follow(
+        &self,
+        user_id: i64,
+        follow_user_id: i64,
+    ) -> Result<Option<UserFollow>>;
+
+    /// 解除关注关系
+    async fn delete_user_follow(&self, user_id: i64, follow_user_id: i64) -> Result<()>;
+
+    /// 分页查询某用户的关注列表（按创建时间倒序）
+    async fn find_followings(
+        &self,
+        user_id: i64,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<UserFollow>>;
+
+    /// 分页查询某用户的粉丝列表（按创建时间倒序）
+    async fn find_followers(
+        &self,
+        user_id: i64,
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<UserFollow>>;
+
+    /// 统计某用户的关注数
+    async fn count_followings(&self, user_id: i64) -> Result<u64>;
+
+    /// 统计某用户的粉丝数
+    async fn count_followers(&self, user_id: i64) -> Result<u64>;
 }

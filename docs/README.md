@@ -46,6 +46,7 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | [features/label.md](features/label.md) | Label 用户标签特性的全链路设计：领域模型、业务规则、核心交互、未来扩展 |
 | [features/user.md](features/user.md) | User 用户系统的整体设计：身份、凭据、认证、数据模型与接口对应 |
 | [features/content.md](features/content.md) | Content 内容系统（文章 / 视频 …）设计方案：可扩展的类型建模、数据模型、API、扩展机制与实施计划 |
+| [features/follow.md](features/follow.md) | Follow 用户关注系统：单向关注关联表、幂等操作、统计与分页列表 |
 
 特性文档横跨整条链路（entity → storage → sea_orm → api），与各层模块文档互为补充：查"这个特性怎么设计"看 features 文档，查"这个类型/函数怎么实现"看对应层文档。
 
@@ -60,10 +61,12 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | [feel_api/user.md](feel_api/user.md) | 用户接口：注册 / 注销 / 登录 / 登出 / 用户信息（逐接口：请求、响应、调用链） |
 | [feel_api/label.md](feel_api/label.md) | 标签接口：create / all / list / users / add / update / remove（逐接口文档） |
 | [feel_api/content.md](feel_api/content.md) | 内容接口：create / info / list / feed / update / remove（逐接口文档） |
+| [feel_api/follow.md](feel_api/follow.md) | 关注接口：add / remove / stats / followers / followings（逐接口文档） |
 | [feel_api/model/README.md](feel_api/model/README.md) | DTO 模块结构（`model/`）与设计原则 |
 | [feel_api/model/user.md](feel_api/model/user.md) | 用户 DTO：各接口请求/响应模型定义 |
 | [feel_api/model/label.md](feel_api/model/label.md) | 标签 DTO：各接口请求/响应模型定义（`LabelResponse`、`UserLabelItem` 等） |
 | [feel_api/model/content.md](feel_api/model/content.md) | 内容 DTO：请求/响应模型（`ContentItem`、`ContentPageResponse` 等） |
+| [feel_api/model/follow.md](feel_api/model/follow.md) | 关注 DTO：请求/响应模型（`FollowResponse`、`FollowStatsResponse` 等） |
 | [feel_api/model/response.md](feel_api/model/response.md) | `ApiResponse<T>` 通用 JSON 响应封装、预定义状态码、工厂函数 |
 
 ### 3.2 `feel_entity` — 领域实体层（`crates/feel_entity/`）
@@ -101,6 +104,13 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | [feel_storage/ContentDataBase.md](feel_storage/ContentDataBase.md) | `ContentDataBase` trait + `CommonContentDataBase`：业务校验与分页归一化 |
 | [feel_storage/ContentCache.md](feel_storage/ContentCache.md) | `ContentCache` trait + `CommonContentCache`：feed 分页 Redis 缓存（Cache-Aside + 版本号失效） |
 
+**关注模块**
+
+| 文档 | 内容 |
+|------|------|
+| [feel_storage/UserFollowRepo.md](feel_storage/UserFollowRepo.md) | `UserFollowRepo` trait：关注关系持久化接口 |
+| [feel_storage/UserFollowDataBase.md](feel_storage/UserFollowDataBase.md) | `UserFollowDataBase` trait + `CommonUserFollowDataBase`：幂等关注/统计/分页 |
+
 **错误与工具**
 
 | 文档 | 内容 |
@@ -119,12 +129,13 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | [feel_sea_orm/ContentEntity.md](feel_sea_orm/ContentEntity.md) | `content` 表 ORM 实体：内容基表与索引 |
 | [feel_sea_orm/ContentArticleEntity.md](feel_sea_orm/ContentArticleEntity.md) | `content_article` 表 ORM 实体：文章明细 |
 | [feel_sea_orm/ContentVideoEntity.md](feel_sea_orm/ContentVideoEntity.md) | `content_video` 表 ORM 实体：视频明细 |
+| [feel_sea_orm/UserFollowEntity.md](feel_sea_orm/UserFollowEntity.md) | `user_follow` 表 ORM 实体：关注关系与索引 |
 
 ### 3.5 `migration` — 数据库迁移（`crates/migration/`）
 
 | 文档 | 内容 |
 |------|------|
-| [migration/README.md](migration/README.md) | 迁移总览：Migrator 定义、5 个迁移文件清单（含 content）、表结构概要、主键与自增约定、CLI 用法 |
+| [migration/README.md](migration/README.md) | 迁移总览：Migrator 定义、6 个迁移文件清单（含 content / follow）、表结构概要、主键与自增约定、CLI 用法 |
 | `crates/migration/README.md`（仓库内） | Migrator CLI 用法（generate / up / down / fresh / status 等命令） |
 
 ### 3.6 `feel_core` — 核心公共依赖（`crates/feel_core/`）
@@ -157,6 +168,12 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | 内容系统代码落地 | ✅ | Phase 1：migration + feel_entity/feel_sea_orm/feel_storage/feel_api 全链路，`cargo check --workspace` 通过 |
 | Feed 流增强 | ✅ | `view_count` 统计（migration `m20260211`）+ `latest`/`popular` 排序 + 列表卡片内嵌 `author` 摘要 |
 | Feed 缓存 | ✅ | `ContentCache` / `CommonContentCache`：feed 分页 Cache-Aside（TTL 60s + 版本号失效），写操作自动失效 |
+| `docs/features/follow.md` | ✅ | 用户关注系统设计：`user_follow` 关联表、幂等操作、统计与分页 |
+| `docs/feel_api/follow.md` | ✅ | 关注接口逐接口文档（add / remove / stats / followers / followings） |
+| `docs/feel_api/model/follow.md` | ✅ | 关注 DTO 请求/响应模型 |
+| `docs/feel_storage/UserFollowRepo.md` + `UserFollowDataBase.md` | ✅ | 关注关系持久化接口与数据访问层 |
+| `docs/feel_sea_orm/UserFollowEntity.md` | ✅ | `user_follow` 表 ORM 实体 |
+| 关注系统代码落地 | ✅ | migration + feel_entity/feel_sea_orm/feel_storage/feel_api 全链路，`cargo check --workspace` 通过 |
 | 根 `README.md` | ✅ | 仓库入口：架构速览、快速开始、文档导航 |
 | 既有文档刷新 | ✅ | `feel_api/README.md`（模块树/AppState）、`feel_api/model/README.md`、`UserEntity.md`（主键说明）、`features/label.md`（接口路径与 JSON）对齐当前实现 |
 
@@ -165,7 +182,7 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | 优先级 | 建议 | 说明 |
 |--------|------|------|
 | 低 | API 参考集中页 | 将 `feel_api/` 各接口文档汇总为一页可检索的接口索引（含请求/响应示例） |
-| 低 | features 文档扩展 | 评论（情绪化表达限制）、内容审核/推荐流等特性的设计文档，格式对齐 `features/user.md` / `features/label.md`（用户/标签/内容系统设计文档均已就绪，内容系统 Phase 1 代码已落地） |
+| 低 | features 文档扩展 | 评论（情绪化表达限制）、内容审核/推荐流、关注流等特性的设计文档，格式对齐 `features/user.md` / `features/label.md`（用户/标签/内容/关注系统设计文档均已就绪） |
 | 低 | 部署细化 | 补充 Docker / CI 等部署方式（`deploy.md` 目前覆盖本地启动） |
 
 ## 5. 文档编写约定

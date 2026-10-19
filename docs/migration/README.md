@@ -18,7 +18,8 @@ crates/migration/src/
 ├── m20260209_000000_add_labels.rs          # label 表
 ├── m20260209_000001_add_user_labels.rs     # user_label 表
 ├── m20260210_000000_add_content.rs         # content / content_article / content_video 表
-└── m20260211_000000_add_content_view_count.rs # content.view_count + 热度索引
+├── m20260211_000000_add_content_view_count.rs # content.view_count + 热度索引
+└── m20260212_000000_add_user_follows.rs    # user_follow 表（关注关系）
 ```
 
 ## Migrator 定义
@@ -35,6 +36,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260209_000001_add_user_labels::Migration),
             Box::new(m20260210_000000_add_content::Migration),
             Box::new(m20260211_000000_add_content_view_count::Migration),
+            Box::new(m20260212_000000_add_user_follows::Migration),
         ]
     }
 }
@@ -52,6 +54,7 @@ impl MigratorTrait for Migrator {
 | `m20260209_000001_add_user_labels` | `user_label` | 唯一索引 `idx_user_label_user_id_label_id (user_id, label_id)`；普通索引 `idx_user_label_label_id` |
 | `m20260210_000000_add_content` | `content` / `content_article` / `content_video` | 索引 `idx_content_user_created (user_id, created_at)`、`idx_content_type_created (content_type, created_at)`；明细表 1:1 关联 `content.id` |
 | `m20260211_000000_add_content_view_count` | （alter `content`） | 新增 `view_count BIGINT NOT NULL DEFAULT 0`；索引 `idx_content_view_created (view_count, created_at)` |
+| `m20260212_000000_add_user_follows` | `user_follow` | 唯一索引 `idx_user_follow_pair (user_id, follow_user_id)`；粉丝索引 `idx_user_follow_follow (follow_user_id)` |
 
 > **表名注意**：`label`、`user_label` 为**单数**表名，与 `feel_sea_orm` 实体的 `#[sea_orm(table_name = ...)]` 保持一致；`users`、`user_credentials` 为复数/下划线组合。以实体 `table_name` 为准。
 >
@@ -65,6 +68,7 @@ impl MigratorTrait for Migrator {
 | `user_credentials` | id / user_uid / credential_type / credential_name / encrypted_data / encryption_key / is_enabled / created_at / updated_at | 登录凭据（加密存储，`user_uid` 逻辑关联 `users.uid`） |
 | `label` | id / name / description / remark / influence / enabled / created_at / updated_at | 标签本体（公有资源，字段语义见 [features/label.md](../features/label.md)「数据模型」） |
 | `user_label` | id / user_id / label_id / enabled / created_at / updated_at | 用户×标签关联（`user_id` 关联 `users.id`，`label_id` 关联 `label.id`） |
+| `user_follow` | id / user_id / follow_user_id / enabled / created_at / updated_at | 用户关注关系（`user_id` 关注 `follow_user_id`，均为 `users.id`） |
 | `content` | id / user_id / content_type / title / enabled / is_delete / view_count / created_at / updated_at | 内容基表（公共字段，含浏览量），字段语义见 [features/content.md](../features/content.md) |
 | `content_article` | content_id / body | 文章明细（1:1 关联 `content.id`） |
 | `content_video` | content_id / video_url / cover_url / duration_secs | 视频明细（1:1 关联 `content.id`） |
@@ -91,6 +95,6 @@ cargo run -p migration -- status  # 查看迁移状态
 
 | 项 | 状态 | 说明 |
 |----|------|------|
-| 迁移文件 | ✅ 6 个 | users / user_credentials / label / user_label / content 系列 / content.view_count |
+| 迁移文件 | ✅ 7 个 | users / user_credentials / label / user_label / content 系列 / content.view_count / user_follow |
 | 自动执行 | ✅ | feel_api 启动时 `Migrator::up` |
 | 回滚 | ✅ | 每个迁移实现 `down()` |

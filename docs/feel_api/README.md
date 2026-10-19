@@ -4,7 +4,7 @@
 
 `feel_api` 是 feel 平台的 **HTTP API 服务**，基于 [Poem](https://github.com/poem-web/poem) 框架构建，位于 `cmd/feel_api/`。
 
-负责提供用户、标签与内容相关的 RESTful 接口（注册、登录、用户信息、标签增删改查、内容发布等），通过 `feel_storage` 和 `feel_core` 与数据库交互。
+负责提供用户、标签、内容与关注相关的 RESTful 接口（注册、登录、用户信息、标签增删改查、内容发布、关注/粉丝等），通过 `feel_storage` 和 `feel_core` 与数据库交互。
 
 ## 模块位置
 
@@ -18,13 +18,16 @@ cmd/feel_api/src/
 │   ├── user.rs      # 用户接口 DTO
 │   ├── label.rs     # 标签接口 DTO
 │   ├── content.rs   # 内容接口 DTO
+│   ├── follow.rs    # 关注接口 DTO
 │   └── response.rs  # 通用响应封装 ApiResponse<T>
 ├── user/
 │   └── mod.rs   # 用户相关接口（/api/v1/users/*）
 ├── label/
 │   └── mod.rs   # 标签相关接口（/api/v1/labels/*）
-└── content/
-    └── mod.rs   # 内容相关接口（/api/v1/content/*）
+├── content/
+│   └── mod.rs   # 内容相关接口（/api/v1/content/*）
+└── follow/
+    └── mod.rs   # 关注相关接口（/api/v1/follow/*）
 ```
 
 ## 运行方式
@@ -64,14 +67,15 @@ pub struct AppState {
     pub user_database: Arc<dyn UserDataBase>,
     pub label_database: Arc<dyn LabelDataBase>,
     pub content_database: Arc<dyn ContentDataBase>,
+    pub user_follow_database: Arc<dyn UserFollowDataBase>,
 }
 ```
 
-启动时（`init_app_state`）连接 PostgreSQL 并自动执行迁移（`Migrator::up`），初始化 Redis 客户端，创建 `CommonUserDataBase`（`SeaOrmUserRepo` + `CommonUserCache` + `jwt_secret`）、`CommonLabelDataBase`（`SeaOrmLabelRepo`）与 `CommonContentDataBase`（`SeaOrmContentRepo`）实例注入到 Poem 的共享状态中，供各 handler 使用。路由在 `app_route()` 中挂载：`/users`、`/labels` 与 `/content`。
+启动时（`init_app_state`）连接 PostgreSQL 并自动执行迁移（`Migrator::up`），初始化 Redis 客户端，创建 `CommonUserDataBase`（`SeaOrmUserRepo` + `CommonUserCache` + `jwt_secret`）、`CommonLabelDataBase`（`SeaOrmLabelRepo`）、`CommonContentDataBase`（`SeaOrmContentRepo` + `CommonContentCache`）与 `CommonUserFollowDataBase`（`SeaOrmUserFollowRepo`）实例注入到 Poem 的共享状态中，供各 handler 使用。路由在 `app_route()` 中挂载：`/users`、`/labels`、`/content` 与 `/follow`。
 
 ## 认证中间件（AuthMiddleware）
 
-`auth.rs` 提供 JWT Bearer token 认证中间件 `auth_middleware`，配合 Poem 的 `EndpointExt::around` 使用。当前用于标签与内容模块的写操作（create / update / remove）：
+`auth.rs` 提供 JWT Bearer token 认证中间件 `auth_middleware`，配合 Poem 的 `EndpointExt::around` 使用。当前用于标签、内容与关注模块的写操作（create / update / remove / add / remove）：
 
 ```rust
 .at("/create", post(create_label).around(auth_middleware))
@@ -117,8 +121,13 @@ pub struct AppState {
 | GET  | `/api/v1/content/feed`              | `content_feed` | 全站 Feed 流（latest/popular） | ❌ | ✅ 已实现 |
 | PUT  | `/api/v1/content/update`            | `update_content` | 更新内容 | ✅ Bearer | ✅ 已实现 |
 | DELETE | `/api/v1/content/remove`          | `remove_content` | 软删除内容 | ✅ Bearer | ✅ 已实现 |
+| POST | `/api/v1/follow/add`                | `add_follow` | 关注某人 | ✅ Bearer | ✅ 已实现 |
+| DELETE | `/api/v1/follow/remove`            | `remove_follow` | 取关某人 | ✅ Bearer | ✅ 已实现 |
+| GET  | `/api/v1/follow/stats`              | `follow_stats` | 关注统计（可选 is_following） | ❌（可选 Bearer） | ✅ 已实现 |
+| GET  | `/api/v1/follow/followers`          | `list_followers` | 粉丝列表 | ❌ | ✅ 已实现 |
+| GET  | `/api/v1/follow/followings`         | `list_followings` | 关注列表 | ❌ | ✅ 已实现 |
 
-> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 为公开接口，通过路径参数 `:uid` 查询用户信息。标签相关接口已实现，见 [label.md](label.md)；内容相关接口已实现，见 [content.md](content.md)。
+> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 为公开接口，通过路径参数 `:uid` 查询用户信息。标签相关接口已实现，见 [label.md](label.md)；内容相关接口已实现，见 [content.md](content.md)；关注相关接口已实现，见 [follow.md](follow.md)。
 
 ## 架构说明
 

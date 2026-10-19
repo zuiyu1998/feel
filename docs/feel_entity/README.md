@@ -19,10 +19,14 @@ crates/feel_entity/src/
 │   ├── mod.rs            # models 子模块重新导出
 │   └── models/
 │       └── mod.rs        # 标签实体（LabelBase、UserLabel）
-└── content/
+├── content/
+│   ├── mod.rs            # models 子模块重新导出
+│   └── models/
+│       └── mod.rs        # 内容实体（ContentBase、ContentKind、载荷、Create/Update/Page）
+└── follow/
     ├── mod.rs            # models 子模块重新导出
     └── models/
-        └── mod.rs        # 内容实体（ContentBase、ContentKind、载荷、Create/Update/Page）
+        └── mod.rs        # 关注实体（UserFollow、UserFollowCreate、FollowStats、FollowPage）
 ```
 
 ## 依赖关系
@@ -483,6 +487,20 @@ pub enum ContentKind {
 - `ContentKind::to_json()` — 生成 API 响应中的 `payload` 对象
 - `match ContentKind` 必须穷尽：新增变体时漏改分派点会**编译失败**，形成类型扩展的编译期保障
 
+## 模块：`follow`
+
+用户关注关系定义在 `feel_entity::follow` 模块下（单向关注：follower → followee），设计见 `docs/features/follow.md`。
+
+### 模块结构
+
+```
+feel_entity::follow
+  ├── UserFollow        — 关注关系（id / user_id / follow_user_id / enabled / 时间戳）
+  ├── UserFollowCreate  — 建立关注请求（create_user_follow 参数）
+  ├── FollowStats       — 关注统计（粉丝数 / 关注数 / 可选 is_following）
+  └── FollowPage        — 关注/粉丝分页结果（items + total + page + page_size）
+```
+
 ## 重新导出与 Prelude
 
 ### 导出路径
@@ -506,6 +524,10 @@ pub enum ContentKind {
 | `feel_entity::content::Content` | struct |
 | `feel_entity::content::ContentCreate` / `ContentUpdate` / `ContentPage` | struct |
 | `feel_entity::content::CONTENT_TYPE_ARTICLE` / `CONTENT_TYPE_VIDEO` | const |
+| `feel_entity::follow::UserFollow` | struct |
+| `feel_entity::follow::UserFollowCreate` | struct |
+| `feel_entity::follow::FollowStats` | struct |
+| `feel_entity::follow::FollowPage` | struct |
 
 ### Prelude
 
@@ -513,6 +535,7 @@ pub enum ContentKind {
 // src/lib.rs
 pub mod prelude {
     pub use crate::content::*;
+    pub use crate::follow::*;
     pub use crate::label::*;
     pub use crate::user::*;
 }
@@ -521,11 +544,12 @@ pub mod prelude {
 使用方式：
 
 ```rust
-use feel_entity::prelude::*;   // 导入所有实体（user + label + content）
+use feel_entity::prelude::*;   // 导入所有实体（user + label + content + follow）
 // 等价于：
 use feel_entity::user::{UserBase, UserRegister, UserLogin, LoginResult, UserUpdate, UserCredential};
 use feel_entity::label::{LabelBase, LabelCreate, LabelUpdate, UserLabel, UserLabelCreate};
 use feel_entity::content::{ContentBase, ContentKind, Content, ContentCreate, ContentUpdate, ContentPage};
+use feel_entity::follow::{UserFollow, UserFollowCreate, FollowStats, FollowPage};
 ```
 
 ## 类型关系图

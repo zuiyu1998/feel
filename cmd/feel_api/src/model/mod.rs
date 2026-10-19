@@ -6,6 +6,7 @@
 //! - API 版本兼容性
 
 pub mod content;
+pub mod follow;
 pub mod label;
 pub mod response;
 pub mod user;

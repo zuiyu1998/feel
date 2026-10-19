@@ -6,6 +6,7 @@ mod m20260209_000000_add_labels;
 mod m20260209_000001_add_user_labels;
 mod m20260210_000000_add_content;
 mod m20260211_000000_add_content_view_count;
+mod m20260212_000000_add_user_follows;
 
 pub struct Migrator;
 
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260209_000001_add_user_labels::Migration),
             Box::new(m20260210_000000_add_content::Migration),
             Box::new(m20260211_000000_add_content_view_count::Migration),
+            Box::new(m20260212_000000_add_user_follows::Migration),
         ]
     }
 }
