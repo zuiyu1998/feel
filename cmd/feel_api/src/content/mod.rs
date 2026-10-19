@@ -107,6 +107,11 @@ async fn create_content(
         Err(e) => return from_storage_error(e),
     };
 
+    // 4. 发布扇出（推拉结合）：普通作者写入粉丝收件箱；大 V 由读时拉取（best-effort）
+    if let Err(e) = state.feed_database.publish(me.id, content.base.id).await {
+        tracing::warn!("feed fan-out failed for content {}: {e}", content.base.id);
+    }
+
     ok(content_item(content, brief_of(&me)))
 }
 
@@ -259,6 +264,18 @@ async fn remove_content(
         .await
     {
         return from_storage_error(e);
+    }
+
+    // 从粉丝收件箱回收该内容（best-effort；读取侧亦会过滤已删除内容）
+    if let Err(e) = state
+        .feed_database
+        .remove_content(me.id, body.0.content_id)
+        .await
+    {
+        tracing::warn!(
+            "feed inbox cleanup failed for content {}: {e}",
+            body.0.content_id
+        );
     }
 
     ok(())

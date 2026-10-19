@@ -23,10 +23,10 @@ crates/feel_entity/src/
 │   ├── mod.rs            # models 子模块重新导出
 │   └── models/
 │       └── mod.rs        # 内容实体（ContentBase、ContentKind、载荷、Create/Update/Page）
-└── follow/
+└── feed/
     ├── mod.rs            # models 子模块重新导出
     └── models/
-        └── mod.rs        # 关注实体（UserFollow、UserFollowCreate、FollowStats、FollowPage）
+        └── mod.rs        # 关注流视图（FollowingFeedPage：合并窗口 + has_more）
 ```
 
 ## 依赖关系
@@ -487,6 +487,19 @@ pub enum ContentKind {
 - `ContentKind::to_json()` — 生成 API 响应中的 `payload` 对象
 - `match ContentKind` 必须穷尽：新增变体时漏改分派点会**编译失败**，形成类型扩展的编译期保障
 
+## 模块：`feed`
+
+关注流视图类型定义在 `feel_entity::feed` 模块下（推拉结合的合并结果，设计见 `docs/features/feed.md`）。
+
+### 模块结构
+
+```
+feel_entity::feed
+  └── FollowingFeedPage — 关注流分页结果（items + page + page_size + has_more）
+```
+
+> 关注流无独立表：内容来自 `content`，关系来自 `user_follow`，收件箱在 Redis。
+
 ## 模块：`follow`
 
 用户关注关系定义在 `feel_entity::follow` 模块下（单向关注：follower → followee），设计见 `docs/features/follow.md`。
@@ -528,6 +541,7 @@ feel_entity::follow
 | `feel_entity::follow::UserFollowCreate` | struct |
 | `feel_entity::follow::FollowStats` | struct |
 | `feel_entity::follow::FollowPage` | struct |
+| `feel_entity::feed::FollowingFeedPage` | struct |
 
 ### Prelude
 
@@ -535,6 +549,7 @@ feel_entity::follow
 // src/lib.rs
 pub mod prelude {
     pub use crate::content::*;
+    pub use crate::feed::*;
     pub use crate::follow::*;
     pub use crate::label::*;
     pub use crate::user::*;
@@ -544,12 +559,13 @@ pub mod prelude {
 使用方式：
 
 ```rust
-use feel_entity::prelude::*;   // 导入所有实体（user + label + content + follow）
+use feel_entity::prelude::*;   // 导入所有实体（user + label + content + follow + feed）
 // 等价于：
 use feel_entity::user::{UserBase, UserRegister, UserLogin, LoginResult, UserUpdate, UserCredential};
 use feel_entity::label::{LabelBase, LabelCreate, LabelUpdate, UserLabel, UserLabelCreate};
 use feel_entity::content::{ContentBase, ContentKind, Content, ContentCreate, ContentUpdate, ContentPage};
 use feel_entity::follow::{UserFollow, UserFollowCreate, FollowStats, FollowPage};
+use feel_entity::feed::FollowingFeedPage;
 ```
 
 ## 类型关系图

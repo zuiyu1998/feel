@@ -47,6 +47,7 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | [features/user.md](features/user.md) | User 用户系统的整体设计：身份、凭据、认证、数据模型与接口对应 |
 | [features/content.md](features/content.md) | Content 内容系统（文章 / 视频 …）设计方案：可扩展的类型建模、数据模型、API、扩展机制与实施计划 |
 | [features/follow.md](features/follow.md) | Follow 用户关注系统：单向关注关联表、幂等操作、统计与分页列表 |
+| [features/feed.md](features/feed.md) | Feed 关注流（推拉结合）：写扩散收件箱 + 读扩散大 V 合并、窗口语义 |
 
 特性文档横跨整条链路（entity → storage → sea_orm → api），与各层模块文档互为补充：查"这个特性怎么设计"看 features 文档，查"这个类型/函数怎么实现"看对应层文档。
 
@@ -62,11 +63,13 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | [feel_api/label.md](feel_api/label.md) | 标签接口：create / all / list / users / add / update / remove（逐接口文档） |
 | [feel_api/content.md](feel_api/content.md) | 内容接口：create / info / list / feed / update / remove（逐接口文档） |
 | [feel_api/follow.md](feel_api/follow.md) | 关注接口：add / remove / stats / followers / followings（逐接口文档） |
+| [feel_api/feed.md](feel_api/feed.md) | 关注流接口：GET /feed/following（推拉结合时间线） |
 | [feel_api/model/README.md](feel_api/model/README.md) | DTO 模块结构（`model/`）与设计原则 |
 | [feel_api/model/user.md](feel_api/model/user.md) | 用户 DTO：各接口请求/响应模型定义 |
 | [feel_api/model/label.md](feel_api/model/label.md) | 标签 DTO：各接口请求/响应模型定义（`LabelResponse`、`UserLabelItem` 等） |
 | [feel_api/model/content.md](feel_api/model/content.md) | 内容 DTO：请求/响应模型（`ContentItem`、`ContentPageResponse` 等） |
 | [feel_api/model/follow.md](feel_api/model/follow.md) | 关注 DTO：请求/响应模型（`FollowResponse`、`FollowStatsResponse` 等） |
+| [feel_api/model/feed.md](feel_api/model/feed.md) | 关注流 DTO：请求/响应模型（`FollowingFeedResponse` 等） |
 | [feel_api/model/response.md](feel_api/model/response.md) | `ApiResponse<T>` 通用 JSON 响应封装、预定义状态码、工厂函数 |
 
 ### 3.2 `feel_entity` — 领域实体层（`crates/feel_entity/`）
@@ -110,6 +113,8 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 |------|------|
 | [feel_storage/UserFollowRepo.md](feel_storage/UserFollowRepo.md) | `UserFollowRepo` trait：关注关系持久化接口 |
 | [feel_storage/UserFollowDataBase.md](feel_storage/UserFollowDataBase.md) | `UserFollowDataBase` trait + `CommonUserFollowDataBase`：幂等关注/统计/分页 |
+| [feel_storage/UserFeedDataBase.md](feel_storage/UserFeedDataBase.md) | `UserFeedDataBase` trait + `CommonUserFeedDataBase`：推拉结合关注流 |
+| [feel_storage/FeedCache.md](feel_storage/FeedCache.md) | `UserFeedCache` + `CommonUserFeedCache`：Redis ZSET 收件箱（写扩散） |
 
 **错误与工具**
 
@@ -173,6 +178,11 @@ Workspace 由 6 个 crate 组成（Cargo workspace，见根 `Cargo.toml`）：
 | `docs/feel_api/model/follow.md` | ✅ | 关注 DTO 请求/响应模型 |
 | `docs/feel_storage/UserFollowRepo.md` + `UserFollowDataBase.md` | ✅ | 关注关系持久化接口与数据访问层 |
 | `docs/feel_sea_orm/UserFollowEntity.md` | ✅ | `user_follow` 表 ORM 实体 |
+| `docs/features/feed.md` | ✅ | 关注流（推拉结合）设计：写扩散收件箱 + 读扩散大 V 合并、窗口语义、参数表 |
+| `docs/feel_api/feed.md` | ✅ | 关注流接口文档（GET /feed/following） |
+| `docs/feel_api/model/feed.md` | ✅ | 关注流 DTO 模型 |
+| `docs/feel_storage/UserFeedDataBase.md` + `FeedCache.md` | ✅ | 推拉合并数据访问层 + Redis 收件箱缓存 |
+| 关注流代码落地 | ✅ | 发布扇出 + 读时拉合并 + 收件箱回收，复用 content/follow 系统，无需新迁移 |
 | 关注系统代码落地 | ✅ | migration + feel_entity/feel_sea_orm/feel_storage/feel_api 全链路，`cargo check --workspace` 通过 |
 | 根 `README.md` | ✅ | 仓库入口：架构速览、快速开始、文档导航 |
 | 既有文档刷新 | ✅ | `feel_api/README.md`（模块树/AppState）、`feel_api/model/README.md`、`UserEntity.md`（主键说明）、`features/label.md`（接口路径与 JSON）对齐当前实现 |

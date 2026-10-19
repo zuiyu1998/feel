@@ -125,7 +125,7 @@ CREATE INDEX        idx_user_follow_follow ON user_follow (follow_user_id);
 
 **Phase 2 — 增强**
 
-- 关注流：feed 增加 `mode=following`（按关注作者聚合内容）
+- 关注流 ✅ 已实现（推拉结合，见 `docs/features/feed.md`）
 - 关注/取关通知（站内通知系统）
 - 双向关注（互相关注）状态展示
 - 关注计数 Redis 缓存（对照 `ContentCache` 模式）

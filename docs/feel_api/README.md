@@ -4,7 +4,7 @@
 
 `feel_api` 是 feel 平台的 **HTTP API 服务**，基于 [Poem](https://github.com/poem-web/poem) 框架构建，位于 `cmd/feel_api/`。
 
-负责提供用户、标签、内容与关注相关的 RESTful 接口（注册、登录、用户信息、标签增删改查、内容发布、关注/粉丝等），通过 `feel_storage` 和 `feel_core` 与数据库交互。
+负责提供用户、标签、内容、关注与关注流相关的 RESTful 接口（注册、登录、用户信息、标签增删改查、内容发布、关注/粉丝、关注流等），通过 `feel_storage` 和 `feel_core` 与数据库交互。
 
 ## 模块位置
 
@@ -19,6 +19,7 @@ cmd/feel_api/src/
 │   ├── label.rs     # 标签接口 DTO
 │   ├── content.rs   # 内容接口 DTO
 │   ├── follow.rs    # 关注接口 DTO
+│   ├── feed.rs      # 关注流接口 DTO
 │   └── response.rs  # 通用响应封装 ApiResponse<T>
 ├── user/
 │   └── mod.rs   # 用户相关接口（/api/v1/users/*）
@@ -26,8 +27,10 @@ cmd/feel_api/src/
 │   └── mod.rs   # 标签相关接口（/api/v1/labels/*）
 ├── content/
 │   └── mod.rs   # 内容相关接口（/api/v1/content/*）
-└── follow/
-    └── mod.rs   # 关注相关接口（/api/v1/follow/*）
+├── follow/
+│   └── mod.rs   # 关注相关接口（/api/v1/follow/*）
+└── feed/
+    └── mod.rs   # 关注流接口（/api/v1/feed/*）
 ```
 
 ## 运行方式
@@ -68,10 +71,11 @@ pub struct AppState {
     pub label_database: Arc<dyn LabelDataBase>,
     pub content_database: Arc<dyn ContentDataBase>,
     pub user_follow_database: Arc<dyn UserFollowDataBase>,
+    pub feed_database: Arc<dyn UserFeedDataBase>,
 }
 ```
 
-启动时（`init_app_state`）连接 PostgreSQL 并自动执行迁移（`Migrator::up`），初始化 Redis 客户端，创建 `CommonUserDataBase`（`SeaOrmUserRepo` + `CommonUserCache` + `jwt_secret`）、`CommonLabelDataBase`（`SeaOrmLabelRepo`）、`CommonContentDataBase`（`SeaOrmContentRepo` + `CommonContentCache`）与 `CommonUserFollowDataBase`（`SeaOrmUserFollowRepo`）实例注入到 Poem 的共享状态中，供各 handler 使用。路由在 `app_route()` 中挂载：`/users`、`/labels`、`/content` 与 `/follow`。
+启动时（`init_app_state`）连接 PostgreSQL 并自动执行迁移（`Migrator::up`），初始化 Redis 客户端，创建 `CommonUserDataBase`（`SeaOrmUserRepo` + `CommonUserCache` + `jwt_secret`）、`CommonLabelDataBase`（`SeaOrmLabelRepo`）、`CommonContentDataBase`（`SeaOrmContentRepo` + `CommonContentCache`）、`CommonUserFollowDataBase`（`SeaOrmUserFollowRepo`）与 `CommonUserFeedDataBase`（`CommonUserFeedCache` + follow/content repo）实例注入到 Poem 的共享状态中，供各 handler 使用。路由在 `app_route()` 中挂载：`/users`、`/labels`、`/content`、`/follow` 与 `/feed`。
 
 ## 认证中间件（AuthMiddleware）
 
@@ -126,8 +130,9 @@ pub struct AppState {
 | GET  | `/api/v1/follow/stats`              | `follow_stats` | 关注统计（可选 is_following） | ❌（可选 Bearer） | ✅ 已实现 |
 | GET  | `/api/v1/follow/followers`          | `list_followers` | 粉丝列表 | ❌ | ✅ 已实现 |
 | GET  | `/api/v1/follow/followings`         | `list_followings` | 关注列表 | ❌ | ✅ 已实现 |
+| GET  | `/api/v1/feed/following`            | `following_feed` | 关注流（推拉结合） | ✅ Bearer | ✅ 已实现 |
 
-> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 为公开接口，通过路径参数 `:uid` 查询用户信息。标签相关接口已实现，见 [label.md](label.md)；内容相关接口已实现，见 [content.md](content.md)；关注相关接口已实现，见 [follow.md](follow.md)。
+> `register`、`unregister`、`login` 均已接入 `AppState` 和 `feel_storage`，包含错误处理。`login` 自动签发 JWT token。`info` 为公开接口，通过路径参数 `:uid` 查询用户信息。标签相关接口已实现，见 [label.md](label.md)；内容相关接口已实现，见 [content.md](content.md)；关注相关接口已实现，见 [follow.md](follow.md)；关注流已实现，见 [feed.md](feed.md)。
 
 ## 架构说明
 

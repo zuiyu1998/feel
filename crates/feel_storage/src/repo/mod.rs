@@ -77,6 +77,14 @@ pub trait ContentRepo: 'static + Send + Sync {
     /// 分页查询某用户的公开内容（enabled 且未删除，按创建时间倒序）
     async fn find_by_user(&self, user_id: i64, offset: u64, limit: u64) -> Result<Vec<Content>>;
 
+    /// 批量查询多个作者的最近公开内容（关注流拉模式合并用）
+    async fn find_recent_by_users(
+        &self,
+        user_ids: &[i64],
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<Content>>;
+
     /// 统计某用户的公开内容数量
     async fn count_by_user(&self, user_id: i64) -> Result<u64>;
 
@@ -138,4 +146,16 @@ pub trait UserFollowRepo: 'static + Send + Sync {
 
     /// 统计某用户的粉丝数
     async fn count_followers(&self, user_id: i64) -> Result<u64>;
+
+    /// 查询某用户的全部粉丝 id（推模式扇出使用）
+    async fn find_follower_ids(&self, user_id: i64) -> Result<Vec<i64>>;
+
+    /// 查询某用户的全部关注对象 id（读扩散判断大 V 使用）
+    async fn find_following_ids(&self, user_id: i64) -> Result<Vec<i64>>;
+
+    /// 批量统计多个用户的粉丝数（id -> 粉丝数）
+    async fn count_followers_bulk(
+        &self,
+        user_ids: &[i64],
+    ) -> Result<std::collections::HashMap<i64, u64>>;
 }

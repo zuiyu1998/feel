@@ -184,6 +184,32 @@ impl ContentRepo for SeaOrmContentRepo {
         Ok(count)
     }
 
+    async fn find_recent_by_users(
+        &self,
+        user_ids: &[i64],
+        offset: u64,
+        limit: u64,
+    ) -> Result<Vec<Content>> {
+        if user_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let bases = ContentEntity::find()
+            .filter(ContentColumn::UserId.is_in(user_ids.to_vec()))
+            .filter(ContentColumn::Enabled.eq(true))
+            .filter(ContentColumn::IsDelete.eq(false))
+            .order_by_desc(ContentColumn::CreatedAt)
+            .offset(offset)
+            .limit(limit)
+            .all(&self.conn)
+            .await?
+            .into_iter()
+            .map(ContentBase::from)
+            .collect();
+
+        self.load_contents(bases).await
+    }
+
     async fn find_feed(
         &self,
         content_type: Option<&str>,

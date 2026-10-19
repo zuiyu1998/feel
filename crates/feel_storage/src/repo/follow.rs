@@ -9,6 +9,7 @@ use sea_orm::{
     ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder,
     QuerySelect,
 };
+use std::collections::HashMap;
 
 pub struct SeaOrmUserFollowRepo {
     /// Sea-orm database connection
@@ -107,5 +108,40 @@ impl UserFollowRepo for SeaOrmUserFollowRepo {
             .count(&self.conn)
             .await?;
         Ok(count)
+    }
+
+    async fn find_follower_ids(&self, user_id: i64) -> Result<Vec<i64>> {
+        let models = UserFollowEntity::find()
+            .filter(UserFollowColumn::FollowUserId.eq(user_id))
+            .all(&self.conn)
+            .await?;
+        Ok(models.into_iter().map(|model| model.user_id).collect())
+    }
+
+    async fn find_following_ids(&self, user_id: i64) -> Result<Vec<i64>> {
+        let models = UserFollowEntity::find()
+            .filter(UserFollowColumn::UserId.eq(user_id))
+            .all(&self.conn)
+            .await?;
+        Ok(models
+            .into_iter()
+            .map(|model| model.follow_user_id)
+            .collect())
+    }
+
+    async fn count_followers_bulk(&self, user_ids: &[i64]) -> Result<HashMap<i64, u64>> {
+        let mut counts: HashMap<i64, u64> = HashMap::new();
+        if user_ids.is_empty() {
+            return Ok(counts);
+        }
+
+        let models = UserFollowEntity::find()
+            .filter(UserFollowColumn::FollowUserId.is_in(user_ids.to_vec()))
+            .all(&self.conn)
+            .await?;
+        for model in models {
+            *counts.entry(model.follow_user_id).or_insert(0) += 1;
+        }
+        Ok(counts)
     }
 }

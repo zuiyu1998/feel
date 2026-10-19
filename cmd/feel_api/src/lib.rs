@@ -1,15 +1,17 @@
 pub mod auth;
 pub mod content;
+pub mod feed;
 pub mod follow;
 pub mod label;
 pub mod model;
 pub mod user;
 
 use feel_storage::{
-    cache::{content::CommonContentCache, user::CommonUserCache},
+    cache::{content::CommonContentCache, feed::CommonUserFeedCache, user::CommonUserCache},
     database::{
-        CommonContentDataBase, CommonLabelDataBase, CommonUserDataBase, CommonUserFollowDataBase,
-        ContentDataBase, LabelDataBase, UserDataBase, UserFollowDataBase,
+        CommonContentDataBase, CommonLabelDataBase, CommonUserDataBase, CommonUserFeedDataBase,
+        CommonUserFollowDataBase, ContentDataBase, LabelDataBase, UserDataBase, UserFeedDataBase,
+        UserFollowDataBase,
     },
     repo::{SeaOrmContentRepo, SeaOrmLabelRepo, SeaOrmUserFollowRepo, SeaOrmUserRepo},
 };
@@ -40,6 +42,7 @@ pub struct AppState {
     pub label_database: Arc<dyn LabelDataBase>,
     pub content_database: Arc<dyn ContentDataBase>,
     pub user_follow_database: Arc<dyn UserFollowDataBase>,
+    pub feed_database: Arc<dyn UserFeedDataBase>,
 }
 
 pub async fn init_app_state(config: &ApiConfig) -> AppState {
@@ -56,12 +59,16 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
     let user_repo = SeaOrmUserRepo::new(conn.clone());
     let content_repo = SeaOrmContentRepo::new(conn.clone());
     let follow_repo = SeaOrmUserFollowRepo::new(conn.clone());
-    let label_repo = SeaOrmLabelRepo::new(conn);
+    let label_repo = SeaOrmLabelRepo::new(conn.clone());
+    // 关注流使用独立 repo 实例（共享同一连接池）
+    let feed_content_repo = SeaOrmContentRepo::new(conn.clone());
+    let feed_follow_repo = SeaOrmUserFollowRepo::new(conn.clone());
 
     let redis_client =
         redis::Client::open(&*config.redis_url).expect("Redis client create failed.");
     let user_cache = Box::new(CommonUserCache::new(redis_client.clone()));
-    let content_cache = CommonContentCache::new(redis_client);
+    let content_cache = CommonContentCache::new(redis_client.clone());
+    let feed_cache = CommonUserFeedCache::new(redis_client);
 
     // 数据访问层
     let user_database = Arc::new(CommonUserDataBase::new(
@@ -72,12 +79,18 @@ pub async fn init_app_state(config: &ApiConfig) -> AppState {
     let label_database = Arc::new(CommonLabelDataBase::new(label_repo));
     let content_database = Arc::new(CommonContentDataBase::new(content_repo, content_cache));
     let user_follow_database = Arc::new(CommonUserFollowDataBase::new(follow_repo));
+    let feed_database = Arc::new(CommonUserFeedDataBase::new(
+        feed_cache,
+        feed_follow_repo,
+        feed_content_repo,
+    ));
 
     AppState {
         user_database,
         label_database,
         content_database,
         user_follow_database,
+        feed_database,
     }
 }
 
@@ -87,4 +100,5 @@ pub fn app_route() -> Route {
         .nest("/labels", label::router())
         .nest("/content", content::router())
         .nest("/follow", follow::router())
+        .nest("/feed", feed::router())
 }
