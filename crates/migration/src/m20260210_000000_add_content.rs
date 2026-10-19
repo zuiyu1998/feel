@@ -55,23 +55,33 @@ impl MigrationTrait for Migration {
                     .timestamp_with_time_zone()
                     .not_null(),
             )
-            .index(
-                &mut Index::create()
+            .to_owned();
+
+        manager.create_table(content).await?;
+
+        // 非唯一索引不能作为表内约束(CONSTRAINT 必须指定类型,如 UNIQUE),
+        // 需在建表后单独创建 CREATE INDEX
+        manager
+            .create_index(
+                Index::create()
                     .name("idx_content_user_created")
+                    .table(Content)
                     .col(ContentColumn::UserId)
                     .col(ContentColumn::CreatedAt)
                     .to_owned(),
             )
-            .index(
-                &mut Index::create()
+            .await?;
+
+        manager
+            .create_index(
+                Index::create()
                     .name("idx_content_type_created")
+                    .table(Content)
                     .col(ContentColumn::ContentType)
                     .col(ContentColumn::CreatedAt)
                     .to_owned(),
             )
-            .to_owned();
-
-        manager.create_table(content).await?;
+            .await?;
 
         // -- 文章明细表（1:1 关联 content.id）--
         let article = Table::create()

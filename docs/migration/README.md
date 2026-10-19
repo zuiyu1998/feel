@@ -54,6 +54,8 @@ impl MigratorTrait for Migrator {
 | `m20260211_000000_add_content_view_count` | （alter `content`） | 新增 `view_count BIGINT NOT NULL DEFAULT 0`；索引 `idx_content_view_created (view_count, created_at)` |
 
 > **表名注意**：`label`、`user_label` 为**单数**表名，与 `feel_sea_orm` 实体的 `#[sea_orm(table_name = ...)]` 保持一致；`users`、`user_credentials` 为复数/下划线组合。以实体 `table_name` 为准。
+>
+> **索引创建约定**：非唯一索引（`idx_content_user_created`、`idx_content_type_created`、`idx_content_view_created` 等）不在 `Table::create` 内联定义，而是建表/改表后通过 `manager.create_index()` **单独创建 `CREATE INDEX`**（与 `m20260209_000001_add_user_labels` 一致）。
 
 ### 表结构概要
 
